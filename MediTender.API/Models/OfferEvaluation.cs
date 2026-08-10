@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MediTender.API.Models
 {
     public class OfferEvaluation
@@ -9,7 +11,9 @@ namespace MediTender.API.Models
         public string FinalDecision { get; set; } = string.Empty;
         public List<EvaluationDetail> Details { get; set; } = new();
         public int TenderId { get; set; }
-        public decimal TotalPrice { get; set; } 
+        
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal TotalPrice { get; set; }
     }
 
     public class EvaluationDetail
