@@ -7,6 +7,8 @@ using MediTender.API.Data;
 using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace MediTender.API.Controllers
 {
@@ -71,12 +73,18 @@ namespace MediTender.API.Controllers
             return Unauthorized(new { Message = "Invalid email or password" });
         }
         [HttpPost("update-plan")]
-        // [Authorize] // Ideally this should be authorized
+        [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
         {
-            // In a real app, get user ID from the JWT token.
-            // For now, we find by email for simplicity.
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var userEmailStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                                ?? User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            
+            if (string.IsNullOrEmpty(userEmailStr))
+            {
+                return Unauthorized(new { Message = "User email not found in token." });
+            }
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmailStr);
             
             if (user == null)
             {
@@ -89,10 +97,8 @@ namespace MediTender.API.Controllers
             await _dbContext.SaveChangesAsync();
 
             return Ok(new { Message = "Plan updated successfully" });
-        }
-
-        // --- Helper Methods ---
-        
+        }        
+                
         private string HashPassword(string password)
         {
             using (SHA256 sha256Hash = SHA256.Create())
