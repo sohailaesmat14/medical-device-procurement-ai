@@ -96,9 +96,9 @@ namespace MediTender.API.Services
 
                 return requirements;
             }
-            catch
+            catch (Exception ex) 
             {
-                throw new Exception("AI returned invalid JSON format.");
+                throw new Exception("AI returned invalid JSON format. Please check the inner exception for details.", ex);
             }
         }
     }
