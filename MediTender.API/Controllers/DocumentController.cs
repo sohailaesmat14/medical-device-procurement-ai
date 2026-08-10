@@ -50,7 +50,18 @@ namespace MediTender.API.Controllers
 
                 using var stream = request.File.OpenReadStream();
                 var extractedText = await Task.Run(() => _pdfParsingService.ExtractTextFromPdf(stream));
+
+                if (string.IsNullOrWhiteSpace(extractedText) || extractedText.Trim().Length < 50)
+                {
+                    return BadRequest("Error: The PDF contains no readable text. It appears to be a scanned image. Please use OCR software to make it text-searchable before uploading.");
+                }
+
                 var chunks = _textChunkingService.ChunkText(extractedText);
+
+                if (chunks == null || chunks.Count == 0)
+                {
+                    return BadRequest("Error: The document text could not be processed into chunks. Please check the file format.");
+                }
                 
             
                 await _vectorStorageService.SaveChunksToQdrantAsync(request.File.FileName, request.DocumentType, request.VendorName, chunks, request.TenderId);
