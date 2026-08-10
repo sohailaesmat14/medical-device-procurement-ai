@@ -71,7 +71,7 @@ namespace MediTender.API.Services
                 Make sure TotalPrice is a number. If not found, return 0.
                 ";
 
-                var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt);
+                var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true);
                 
                 int startIndex = aiResponse.IndexOf('{');
                 int endIndex = aiResponse.LastIndexOf('}');

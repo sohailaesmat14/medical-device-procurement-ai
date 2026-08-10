@@ -24,11 +24,53 @@ namespace MediTender.API.Services
             _httpClient.DefaultRequestHeaders.Add("x-goog-api-key", _googleApiKey);
         }
 
-        public async Task<string> GenerateChatResponseAsync(string prompt, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateChatResponseAsync(string prompt, bool jsonMode = false, CancellationToken cancellationToken = default)
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_chatModel}:generateContent";
-            var payload = new { contents = new[] { new { parts = new[] { new { text = prompt } } } } };
-            var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            var url =$"https://generativelanguage.googleapis.com/v1beta/models/{_chatModel}:generateContent";
+            
+            object payload = jsonMode
+                ? new
+                {
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = new[]
+                            {
+                                new
+                                {
+                                    text = prompt
+                                }
+                            }
+                        }
+                    },
+                    generationConfig = new
+                    {
+                        responseMimeType = "application/json"
+                    }
+                }
+                : new
+                {
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = new[]
+                            {
+                                new
+                                {
+                                    text = prompt
+                                }
+                            }
+                        }
+                    }
+                };            
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
+            );
+
 
             cancellationToken.ThrowIfCancellationRequested();
 

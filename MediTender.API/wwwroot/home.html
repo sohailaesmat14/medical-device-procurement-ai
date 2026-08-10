@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediProcure AI - Smart Tendering</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: #f8fafc;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Navbar */
+        header {
+            background-color: #111827;
+            color: white;
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+        }
+        .logo span {
+            color: #10b981;
+        }
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .btn-login {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        .btn-login:hover {
+            color: #10b981;
+        }
+        .btn-signup {
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn-signup:hover {
+            background-color: #1d4ed8;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #f8fafc;
+        }
+        .hero h1 span {
+            color: #38bdf8;
+        }
+        .hero p {
+            font-size: 20px;
+            color: #cbd5e1;
+            max-width: 700px;
+            margin: 0 auto 40px auto;
+            line-height: 1.6;
+        }
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .btn-primary {
+            background-color: #10b981;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            transition: transform 0.2s, background 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #059669;
+            transform: translateY(-3px);
+        }
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #38bdf8;
+            transition: background 0.3s;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .features h2 {
+            font-size: 36px;
+            color: #1e293b;
+            margin-bottom: 50px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        .card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-top: 5px solid #2563eb;
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+        }
+        .card-icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        .card h3 {
+            font-size: 22px;
+            color: #0f172a;
+            margin-bottom: 15px;
+        }
+        .card p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .card.green { border-top-color: #10b981; }
+        .card.orange { border-top-color: #f59e0b; }
+
+        /* How it Works */
+        .how-it-works {
+            background-color: #e2e8f0;
+            padding: 80px 20px;
+            text-align: center;
+        }
+        .how-it-works h2 {
+            font-size: 36px;
+            color: #1e293b;
+            margin-bottom: 50px;
+        }
+        .steps {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .step {
+            flex: 1;
+            min-width: 250px;
+        }
+        .step-number {
+            background-color: #2563eb;
+            color: white;
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 auto 20px auto;
+        }
+        .step h4 {
+            font-size: 20px;
+            color: #1e293b;
+        }
+        .step p {
+            color: #475569;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #111827;
+            color: #94a3b8;
+            text-align: center;
+            padding: 30px 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <header>
+        <a href="home.html" class="logo">MediProcure <span>AI</span> 🤖</a>
+        <div class="nav-links">
+            <a href="login.html" class="btn-login">Sign In</a>
+            <a href="signup.html" class="btn-signup">Get Started</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Transform Hospital Procurement with <span>AI</span></h1>
+        <p>Automate tender evaluations, extract standard specifications instantly using our advanced RAG engine, and make data-driven decisions with comprehensive BI analytics.</p>
+        <div class="hero-buttons">
+            <a href="signup.html" class="btn-primary">Start Free Trial</a>
+            <a href="#features" class="btn-secondary">Explore Features</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <h2>Why Choose MediProcure AI?</h2>
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon">🧠</div>
+                <h3>Smart RAG Engine</h3>
+                <p>Upload massive vendor PDF offers and standard specifications. Our Gemini-powered AI engine instantly reads, chunks, and matches mandatory requirements without human error.</p>
+            </div>
+            <div class="card green">
+                <div class="card-icon">📊</div>
+                <h3>BI Decision Matrix</h3>
+                <p>Get a bird's-eye view of all vendor offers. Our interactive dashboards automatically calculate the best "Value for Money" and highlight missing documents or technical gaps.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-icon">⏱️</div>
+                <h3>10x Faster Evaluation</h3>
+                <p>Turn weeks of manual committee reviews into minutes. Focus your engineering and medical expertise on strategic decisions rather than tedious paperwork.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works -->
+    <section class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h4>Upload Documents</h4>
+                <p>Upload the standard tender specifications along with the technical and financial offers from all participating vendors.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h4>AI Analysis</h4>
+                <p>The system parallel-processes the envelopes, cross-referencing every vendor claim against your strict medical standards.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h4>Review & Approve</h4>
+                <p>Export your automated compliance matrix, review AI-flagged warnings, manually override if necessary, and announce the winner.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 MediTender Smart Assistant. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

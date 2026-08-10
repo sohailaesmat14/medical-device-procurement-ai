@@ -291,14 +291,12 @@
         <header>
             <div class="header-left">
                 <div class="user-profile">
-                    <div class="avatar">SE</div>
+                    <div class="avatar" id="userAvatar">U</div>
                     <div class="user-details">
-                        <strong>Eng. Suhaila</strong><br /><small
-                            >Biomedical Tendering</small
-                        >
+                        <strong id="userNameDisplay">User Name</strong><br />
                     </div>
                 </div>
-                <div class="hospital-badge">🏥 Hospital</div>
+                
             </div>
             <div class="logo">MediProcure <span>AI</span> 🤖</div>
         </header>
@@ -735,6 +733,19 @@
                     startBtn.disabled = false;
                 }
             }
+            document.addEventListener("DOMContentLoaded", () => {
+                const userName = sessionStorage.getItem("user_name") || "Committee Member";
+                
+                document.getElementById("userNameDisplay").innerText = userName;
+
+                const initials = userName.split(' ')
+                                        .map(n => n[0])
+                                        .join('')
+                                        .substring(0, 2)
+                                        .toUpperCase();
+                                        
+                document.getElementById("userAvatar").innerText = initials;
+            });
         </script>
         <!-- Custom Modal -->
         <div class="modal-overlay" id="customModal">

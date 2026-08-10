@@ -16,3 +16,13 @@ async function fetchWithTimeout(url, options = {}) {
         throw error; 
     }
 }
+
+function performLogout() {
+    sessionStorage.removeItem("jwt_token");
+    sessionStorage.removeItem("user_name");
+    sessionStorage.removeItem("user_email");
+    sessionStorage.removeItem("meditender_plan");
+    sessionStorage.removeItem("meditender_quota");
+    
+    window.location.replace("home.html");
+}

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace MediTender.API.Controllers
 {
-    // [Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class DocumentController : ControllerBase
@@ -117,7 +117,6 @@ namespace MediTender.API.Controllers
             return Ok(history);
         }
 
-
         [HttpPost("compare-vendors")]
         public async Task<IActionResult> CompareVendors([FromBody] MultiComparisonRequest request, [FromServices] IComparisonService comparisonService, CancellationToken cancellationToken)
         {
@@ -126,9 +125,11 @@ namespace MediTender.API.Controllers
 
             request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
             int cost = request.VendorNames.Count * 15;
-            if (!TryConsumeQuota(cost, out int remaining))
+            
+            var quotaResult = await TryConsumeQuotaAsync(cost);
+            if (!quotaResult.Success)
             {
-                return BadRequest(new { Message = $"❌ Your current balance ({remaining} points) isn't enough. You need ({cost} points)." });
+                return BadRequest(new { Message = $"❌ Your current balance ({quotaResult.Remaining} points) isn't enough. You need ({cost} points)." });
             }
 
             try
@@ -145,16 +146,17 @@ namespace MediTender.API.Controllers
             }
             catch (OperationCanceledException)
             {
-                RefundQuota(cost); 
+                await RefundQuotaAsync(cost); 
                 return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
-                RefundQuota(cost); 
+                await RefundQuotaAsync(cost); 
                 _logger.LogError(ex, "Error during multi-vendor comparison for Tender: {TenderId}", request.TenderId);
                 return StatusCode(500, new { Message = "An internal server error occurred during vendor comparison. Please review the logs." });
             }
         }
+
         public class MultiComparisonRequest 
         { 
             public int TenderId { get; set; } = 1; 
@@ -236,68 +238,63 @@ namespace MediTender.API.Controllers
             public int TenderId { get; set; } = 1;
         }
         
+        // --- 🟢 New Database-Driven Quota System ---
 
-        private static readonly object _quotaLock = new object();
-        private static readonly Dictionary<string, int> _userQuotas = new();
-        private static DateTime _lastResetDate = DateTime.UtcNow.Date;
-
-        private string GetCurrentUsername()
+        private async Task<(bool Success, int Remaining)> TryConsumeQuotaAsync(int cost)
         {
-            return User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value ?? "committee";
-        }
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            // Fallback for admin account
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                return (true, 9999);
 
-        private bool TryConsumeQuota(int cost, out int remaining)
-        {
-            lock (_quotaLock)
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null) return (false, 0);
+
+            if (user.QuotaPoints >= cost)
             {
-                if (DateTime.UtcNow.Date > _lastResetDate)
-                {
-                    _userQuotas.Clear();
-                    _lastResetDate = DateTime.UtcNow.Date;
-                }
-
-                string username = GetCurrentUsername();
-                if (!_userQuotas.ContainsKey(username))
-                    _userQuotas[username] = 200; 
-
-                if (_userQuotas[username] >= cost)
-                {
-                    _userQuotas[username] -= cost;
-                    remaining = _userQuotas[username];
-                    return true;
-                }
-
-                remaining = _userQuotas[username];
-                return false;
+                user.QuotaPoints -= cost;
+                await _dbContext.SaveChangesAsync();
+                return (true, user.QuotaPoints);
             }
+            
+            return (false, user.QuotaPoints);
         }
 
-        private void RefundQuota(int amount)
+        private async Task RefundQuotaAsync(int amount)
         {
-            lock (_quotaLock)
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId)) return;
+
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user != null)
             {
-                string username = GetCurrentUsername();
-                if (_userQuotas.ContainsKey(username))
-                {
-                    _userQuotas[username] += amount;
-                }
+                user.QuotaPoints += amount;
+                await _dbContext.SaveChangesAsync();
             }
         }
 
         [HttpPost("check-quota")]
-        public IActionResult CheckQuota([FromBody] QuotaRequest request)
+        public async Task<IActionResult> CheckQuota([FromBody] QuotaRequest request)
         {
             int cost = request.VendorCount * 15;
-            lock (_quotaLock)
-            {
-                string username = GetCurrentUsername();
-                if (!_userQuotas.ContainsKey(username)) _userQuotas[username] = 200;
+            
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+                return Ok(new { Success = true, RemainingQuota = 9999 });
+
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null) return Unauthorized();
+
+            if (user.QuotaPoints >= cost)
+                return Ok(new { Success = true, RemainingQuota = user.QuotaPoints });
                 
-                if (_userQuotas[username] >= cost)
-                    return Ok(new { Success = true, RemainingQuota = _userQuotas[username] });
-                    
-                return BadRequest(new { Success = false, Message = $"❌ Your current balance ({_userQuotas[username]} points) isn't enough. You need ({cost} points)." });
-            }
+            return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
+        }
+
+        private string GetCurrentUsername()
+        {
+            return User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value ?? "committee";
         }
         public class QuotaRequest
         {

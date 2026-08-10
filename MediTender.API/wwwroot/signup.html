@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediProcure AI - Login</title>
-    <script src="config.js"></script>
+    <title>MediProcure AI - Sign Up</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -15,13 +14,13 @@
             align-items: center; 
             min-height: 100vh; 
         }
-        .login-container { 
+        .signup-container { 
             background: white; 
             padding: 40px; 
             border-radius: 12px; 
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); 
             width: 100%; 
-            max-width: 400px; 
+            max-width: 450px; 
             text-align: center; 
             margin: 20px;
         }
@@ -51,7 +50,7 @@
 
         .input-group {
             text-align: left;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .input-group label {
             display: block;
@@ -60,7 +59,7 @@
             color: #475569;
             font-weight: bold;
         }
-        input[type="text"], input[type="password"] { 
+        input[type="text"], input[type="email"], input[type="password"] { 
             width: 100%; 
             padding: 12px; 
             border: 1px solid #ccc; 
@@ -68,12 +67,12 @@
             box-sizing: border-box; 
             transition: border-color 0.3s;
         }
-        input[type="text"]:focus, input[type="password"]:focus {
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
             outline: none;
             border-color: #2563eb;
         }
         
-        .login-btn { 
+        .signup-btn { 
             background-color: #2563eb; 
             color: white; 
             border: none; 
@@ -84,8 +83,9 @@
             font-weight: bold; 
             cursor: pointer; 
             transition: 0.3s; 
+            margin-top: 10px;
         }
-        .login-btn:hover { background-color: #1d4ed8; }
+        .signup-btn:hover { background-color: #1d4ed8; }
         
         .error-msg { 
             color: #dc2626; 
@@ -97,80 +97,94 @@
             padding: 10px;
             border-radius: 6px;
         }
-
-        .signup-link {
+        
+        .login-link {
             margin-top: 20px;
             font-size: 14px;
             color: #64748b;
         }
-        .signup-link a {
+        .login-link a {
             color: #2563eb;
             font-weight: bold;
             text-decoration: none;
         }
-        .signup-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
+    <div class="signup-container">
         <a href="home.html" class="logo">MediProcure <span>AI</span> 🤖</a>
         
-        <div class="avatar-placeholder">🔒</div>
+        <div class="avatar-placeholder">👤</div>
         
-        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Committee Login</h2>
-        <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Please authenticate to access the evaluation system.</p>
+        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Create an Account</h2>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Join the future of intelligent tendering.</p>
         
-        <div id="errorMsg" class="error-msg">Invalid credentials. Try again.</div>
+        <div id="errorMsg" class="error-msg"></div>
 
-        <form id="loginForm" onsubmit="event.preventDefault(); performLogin();">
+        <form id="signupForm" onsubmit="event.preventDefault(); performSignup();">
             <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" placeholder="Enter your username" required>
+                <label for="fullname">Full Name</label>
+                <input type="text" id="fullname" placeholder="e.g., Eng. Suhaila" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="email">Work Email</label>
+                <input type="email" id="email" placeholder="name@hospital.com" required>
             </div>
             
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password" required>
+                <input type="password" id="password" placeholder="Create a strong password" required minlength="6">
             </div>
 
-            <button type="submit" class="login-btn">Sign In</button>
+            <div class="input-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" placeholder="Repeat your password" required minlength="6">
+            </div>
+
+            <button type="submit" class="signup-btn">Sign Up & Continue</button>
         </form>
 
-        <div class="signup-link">
-            Don't have an account? <a href="signup.html">Create one here</a>
+        <div class="login-link">
+            Already have an account? <a href="login.html">Sign In here</a>
         </div>
     </div>
 
     <script>
-        async function performLogin() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
+        async function performSignup() {
+            const fullname = document.getElementById('fullname').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             const errorMsg = document.getElementById('errorMsg');
 
+            if (password !== confirmPassword) {
+                errorMsg.innerText = "Passwords do not match. Please try again.";
+                errorMsg.style.display = "block";
+                return;
+            }
+            errorMsg.style.display = "none";
+
             try {
-                const response = await fetch('http://localhost:5172/api/Auth/login', {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass })
+                    body: JSON.stringify({ fullName: fullname, email: email, password: password })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     sessionStorage.setItem("jwt_token", data.token);
-                    sessionStorage.setItem("user_name", user);
-                    // Check if user has an active plan
-                    const hasPlan = sessionStorage.getItem("meditender_plan");
-                    if (hasPlan) {
-                        window.location.replace("upload.html");
-                    } else {
-                        // If no plan, redirect to subscription
-                        window.location.replace("subscription.html");
-                    }
+                    sessionStorage.setItem("user_name", fullname);
+                    sessionStorage.setItem("user_email", email); // Save email for plan update
+                    window.location.href = "subscription.html";
                 } else {
-                    errorMsg.innerText = "Invalid credentials. Try again.";
+                    const errorData = await response.json();
+                    errorMsg.innerText = errorData.message || "Failed to create account.";
                     errorMsg.style.display = "block";
                 }
             } catch (error) {

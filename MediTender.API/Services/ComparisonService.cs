@@ -136,7 +136,7 @@ namespace MediTender.API.Services
                     - ""Evidence"": Exact quote from the context supporting the status. If no context exists, return ""No evidence found.""
                     - ""Score"": integer from 0 to 10.";
 
-                    var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, cancellationToken);
+                    var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true);
                     
                     int startIndex = aiResponse.IndexOf('[');
                     int endIndex = aiResponse.LastIndexOf(']');

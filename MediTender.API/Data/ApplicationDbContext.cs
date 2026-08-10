@@ -15,7 +15,7 @@ namespace MediTender.API.Data
         public DbSet<TenderInteraction> TenderInteractions { get; set; }
         public DbSet<OfferEvaluation> OfferEvaluations { get; set; }
         public DbSet<EvaluationDetail> EvaluationDetails { get; set; }
-
+        public DbSet<ApplicationUser> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
