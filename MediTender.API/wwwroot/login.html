@@ -116,7 +116,7 @@
 <body>
 
     <div class="login-container">
-        <a href="home.html" class="logo">MediProcure <span>AI</span> 🤖</a>
+        <a href="home.html" class="logo">MediProcure <span>AI</span> </a>
         
         <div class="avatar-placeholder">🔒</div>
         
@@ -149,6 +149,10 @@
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
+            const loginBtn = document.querySelector('.login-btn');
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = "Signing in...";
 
             try {
                 const response = await fetch('http://localhost:5172/api/Auth/login', {
@@ -160,8 +164,8 @@
                 if (response.ok) {
                     const data = await response.json();
                     sessionStorage.setItem("jwt_token", data.token);
-                    sessionStorage.setItem("user_name", user);
-                    // Check if user has an active plan
+                    sessionStorage.setItem("user_name", data.fullName || user);
+                    
                     const hasPlan = sessionStorage.getItem("meditender_plan");
                     if (hasPlan) {
                         window.location.replace("upload.html");
@@ -172,10 +176,14 @@
                 } else {
                     errorMsg.innerText = "Invalid credentials. Try again.";
                     errorMsg.style.display = "block";
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = "Sign In";
                 }
             } catch (error) {
                 errorMsg.innerText = "Server connection error.";
                 errorMsg.style.display = "block";
+                loginBtn.disabled = false;
+                loginBtn.innerText = "Sign In";
             }
         }
     </script>
