@@ -42,10 +42,27 @@ namespace MediTender.API.Controllers
             return 0;
         }
 
+        [HttpGet("evaluations/{tenderId}")]
+        public async Task<IActionResult> GetEvaluations(int tenderId)
+        {
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
+
+            var evaluations = await _dbContext.OfferEvaluations
+                .Include(e => e.Details)
+                .Where(e => e.TenderId == tenderId)
+                .ToListAsync();
+
+            return Ok(evaluations);
+        }
+
         [HttpPost("upload-pdf")]
         public async Task<IActionResult> UploadPdfAsync([FromForm] FileUploadRequest request)
         {
             request.VendorName = request.VendorName?.Trim().ToLowerInvariant() ?? string.Empty;
+            
             if (request.File == null || request.File.Length == 0)
                 return BadRequest("Invalid file.");
 
@@ -60,11 +77,20 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
+            using var stream = request.File.OpenReadStream();
+            byte[] header = new byte[4];
+            var bytesRead = await stream.ReadAsync(header, 0, 4);
+            
+            if (bytesRead < 4 || header[0] != 0x25 || header[1] != 0x50 || header[2] != 0x44 || header[3] != 0x46)
+            {
+                return BadRequest("Invalid file format. Only genuine PDF files are permitted.");
+            }
+            stream.Position = 0; 
+
             try
             {
                 await _vectorStorageService.DeleteExistingDocumentAsync(request.TenderId, request.DocumentType, request.VendorName);
 
-                using var stream = request.File.OpenReadStream();
                 var extractedText = await Task.Run(() => _pdfParsingService.ExtractTextFromPdf(stream));
 
                 if (string.IsNullOrWhiteSpace(extractedText) || extractedText.Trim().Length < 50)
@@ -93,7 +119,7 @@ namespace MediTender.API.Controllers
                 _logger.LogError(ex, "Error uploading PDF for DocumentType: {DocumentType}, Vendor: {VendorName}", request.DocumentType, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
             }
-        }        
+        }
 
         [HttpPost("ask")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
@@ -278,32 +304,57 @@ namespace MediTender.API.Controllers
         
         private async Task<(bool Success, int Remaining)> TryConsumeQuotaAsync(int cost)
         {
-            int userId = GetCurrentUserId();
-            if (userId == 0) return (true, 9999);
+            if (User.IsInRole("Committee"))
+                return (true, 9999);
 
-            var user = await _dbContext.Users.FindAsync(userId);
-            if (user == null) return (false, 0);
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return (false, 0);
 
-            if (user.QuotaPoints >= cost)
+            using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
             {
+                var user = await _dbContext.Users.FindAsync(userId);
+                if (user == null || user.QuotaPoints < cost)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, user?.QuotaPoints ?? 0);
+                }
+
                 user.QuotaPoints -= cost;
                 await _dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
                 return (true, user.QuotaPoints);
             }
-            
-            return (false, user.QuotaPoints);
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
-
         private async Task RefundQuotaAsync(int amount)
         {
-            int userId = GetCurrentUserId();
-            if (userId == 0) return;
+            if (User.IsInRole("Committee")) return;
 
-            var user = await _dbContext.Users.FindAsync(userId);
-            if (user != null)
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int userId)) return;
+
+            using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+            try
             {
-                user.QuotaPoints += amount;
-                await _dbContext.SaveChangesAsync();
+                var user = await _dbContext.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    user.QuotaPoints += amount;
+                    await _dbContext.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
