@@ -35,6 +35,7 @@ namespace MediTender.API.Controllers
         [HttpPost("upload-pdf")]
         public async Task<IActionResult> UploadPdfAsync([FromForm] FileUploadRequest request)
         {
+            request.VendorName = request.VendorName?.Trim().ToLowerInvariant() ?? string.Empty;
             if (request.File == null || request.File.Length == 0)
                 return BadRequest("Invalid file.");
 
@@ -122,7 +123,8 @@ namespace MediTender.API.Controllers
         {
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
-            
+                
+            request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
             int cost = request.VendorNames.Count * 15;
             if (!TryConsumeQuota(cost, out int remaining))
             {
