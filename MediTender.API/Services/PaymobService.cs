@@ -48,10 +48,19 @@ namespace MediTender.API.Services
                 order_id = orderId,
                 billing_data = new
                 {
-                    apartment = "NA", email = userEmail, floor = "NA", first_name = "User",
-                    street = "NA", building = "NA", phone_number = "01000000000",
-                    shipping_method = "NA", postal_code = "NA", city = "Alexandria",
-                    country = "EG", last_name = "Account", state = "NA"
+                    apartment = "NA", 
+                    email = userEmail, 
+                    floor = "NA", 
+                    first_name = userEmail.Split('@')[0],
+                    street = "NA", 
+                    building = "NA", 
+                    phone_number = "+201000000000",
+                    shipping_method = "NA", 
+                    postal_code = "NA", 
+                    city = "Cairo",
+                    country = "EG", 
+                    last_name = "User", 
+                    state = "NA"
                 },
                 currency = "EGP",
                 integration_id = int.Parse(integrationId!)

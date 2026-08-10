@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MediTender.API.Services;
 using MediTender.API.Data;
+using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -32,6 +33,11 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "User email is missing." });
             }
 
+            if (request.PlanType != "monthly" && request.PlanType != "annually")
+            {
+                return BadRequest(new { Message = "Invalid plan type." });
+            }
+
             decimal amount = request.PlanType == "monthly" ? 2500 : 22000;
 
             try
@@ -44,11 +50,10 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "Error connecting to payment gateway." });
             }
         }
-        
+
         [HttpPost("webhook")]
         public async Task<IActionResult> PaymobWebhook([FromQuery] string hmac, [FromBody] JsonElement payload)
         {
-            // 1. Verify Request Authentication
             if (!_paymobService.VerifyHmac(hmac, payload.GetRawText()))
             {
                 return Unauthorized();
@@ -56,16 +61,23 @@ namespace MediTender.API.Controllers
 
             var obj = payload.GetProperty("obj");
             var success = obj.GetProperty("success").GetBoolean();
+            var orderId = obj.GetProperty("order").GetProperty("id").GetRawText();
             
             if (success)
             {
+                var isProcessed = await _dbContext.PaymentTransactions.AnyAsync(pt => pt.OrderId == orderId);
+                if (isProcessed)
+                {
+                    return Ok();
+                }
+
                 var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
                 var amountCents = obj.GetProperty("amount_cents").GetInt32();
 
                 var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                 if (user != null)
                 {
-                    if (amountCents == 250000) // 2500 EGP
+                    if (amountCents == 250000)
                     {
                         user.Plan = "monthly";
                         user.QuotaPoints += 2000;
@@ -76,12 +88,13 @@ namespace MediTender.API.Controllers
                         user.QuotaPoints += 99999;
                     }
                     
+                    _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
                     await _dbContext.SaveChangesAsync();
                 }
             }
 
             return Ok(); 
-        }
+        }        
     }
 
     public class PaymentRequest
