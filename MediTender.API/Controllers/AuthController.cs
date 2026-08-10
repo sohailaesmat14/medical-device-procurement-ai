@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 namespace MediTender.API.Controllers
 {
@@ -26,30 +27,30 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("signup")]
-public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
-{
-    if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
-    {
-        return BadRequest(new { Message = "Email already exists." });
-    }
+        public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
+        {
+            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
+            {
+                return BadRequest(new { Message = "Email already exists." });
+            }
 
-    var user = new ApplicationUser
-    {
-        FullName = request.FullName,
-        Email = request.Email,
-        Plan = "free",
-        QuotaPoints = 200
-    };
+            var user = new ApplicationUser
+            {
+                FullName = request.FullName,
+                Email = request.Email,
+                Plan = "free",
+                QuotaPoints = 200
+            };
 
-    var passwordHasher = new PasswordHasher<ApplicationUser>();
-    user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+            var passwordHasher = new PasswordHasher<ApplicationUser>();
+            user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 
-    _dbContext.Users.Add(user);
-    await _dbContext.SaveChangesAsync();
+            _dbContext.Users.Add(user);
+            await _dbContext.SaveChangesAsync();
 
-    var token = GenerateJwtToken(user);
-    return Ok(new { Token = token, Message = "User created successfully" });
-}
+            var token = GenerateJwtToken(user);
+            return Ok(new { Token = token, Message = "User created successfully" });
+        }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -106,20 +107,6 @@ public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
 
             return Ok(new { Message = "Plan updated successfully" });
         }        
-                
-        private string HashPassword(string password)
-        {
-            using (SHA256 sha256Hash = SHA256.Create())
-            {
-                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(password));
-                StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
-                {
-                    builder.Append(bytes[i].ToString("x2"));
-                }
-                return builder.ToString();
-            }
-        }
 
         private string GenerateJwtToken(ApplicationUser user)
         {
@@ -165,21 +152,36 @@ public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
 
     public class LoginRequest
     {
+        [Required]
+        [EmailAddress]
         public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
         public string Password { get; set; } = string.Empty;
     }
 
     public class SignUpRequest
     {
+        [Required]
+        [MinLength(3)]
         public string FullName { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
         public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
         public string Password { get; set; } = string.Empty;
     }
     
     public class UpdatePlanRequest
     {
-        public string Email { get; set; } = string.Empty;
+        [Required]
         public string Plan { get; set; } = string.Empty;
+        
+        [Required]
         public int QuotaPoints { get; set; }
     }
 }

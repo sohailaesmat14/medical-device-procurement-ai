@@ -16,10 +16,19 @@ namespace MediTender.API.Data
         public DbSet<OfferEvaluation> OfferEvaluations { get; set; }
         public DbSet<EvaluationDetail> EvaluationDetails { get; set; }
         public DbSet<ApplicationUser> Users { get; set; }
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<PaymentTransaction>()
+                .HasIndex(p => p.OrderId)
+                .IsUnique();
 
             modelBuilder.Entity<Standard>()
                 .HasIndex(s => s.TenderId)
