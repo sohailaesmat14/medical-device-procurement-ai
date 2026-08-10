@@ -265,8 +265,16 @@
                     statusText.innerText =
                         "Phase 1: Auto-extracting mandatory specifications from Tender Standard...";
 
-                    let extractRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/extract-standard?fileName=${encodeURIComponent(standardFile)}&tenderId=${currentTenderId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                    let extractRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'Authorization': `Bearer ${token}` 
+                        },
+                        body: JSON.stringify({
+                            fileName: standardFile,
+                            tenderId: parseInt(currentTenderId)
+                        })
                     });
                     
                     if (!extractRes.ok)

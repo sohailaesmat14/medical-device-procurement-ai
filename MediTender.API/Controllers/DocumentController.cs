@@ -123,7 +123,7 @@ namespace MediTender.API.Controllers
         {
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
-                
+
             request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
             int cost = request.VendorNames.Count * 15;
             if (!TryConsumeQuota(cost, out int remaining))
@@ -162,27 +162,21 @@ namespace MediTender.API.Controllers
             public List<string> VendorNames { get; set; } = new();
         }
 
-        [HttpGet("extract-standard")]
-        public async Task<IActionResult> ExtractStandardRequirements([FromQuery] string fileName, [FromQuery] int tenderId, [FromServices] IStandardExtractionService extractionService)
+        [HttpPost("extract-standard")]
+        public async Task<IActionResult> ExtractStandardRequirements([FromBody] ExtractStandardRequest request, [FromServices] IStandardExtractionService extractionService)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-                return BadRequest("File name is required.");
+            if (string.IsNullOrEmpty(request.FileName) || request.TenderId <= 0)
+                return BadRequest("Invalid file name or tender ID.");
 
             try
             {
-                var tenderExists = await _dbContext.Tenders.AnyAsync(t => t.Id == tenderId);
-                if (!tenderExists)
-                {
-                    _dbContext.Tenders.Add(new Tender { Id = tenderId, Title = "System Generated Tender", Description = "Auto-generated" });
-                    await _dbContext.SaveChangesAsync();
-                }
-
-                var requirements = await extractionService.ExtractRequirementsAsync(fileName, tenderId);
-                return Ok(new { Requirements = requirements });
+                // هنستخدم request.FileName و request.TenderId
+                var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId);
+                return Ok(requirements);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", tenderId, fileName);
+                _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
         }
@@ -428,6 +422,11 @@ namespace MediTender.API.Controllers
         {
             public int TenderId { get; set; }
             public string VendorName { get; set; } = string.Empty;
+        }
+        public class ExtractStandardRequest
+        {
+            public string FileName { get; set; } = string.Empty;
+            public int TenderId { get; set; }
         }
     }
 }
