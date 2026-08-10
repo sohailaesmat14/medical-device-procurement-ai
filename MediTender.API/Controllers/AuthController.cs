@@ -8,7 +8,7 @@ using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
-
+using Microsoft.AspNetCore.Identity;
 
 namespace MediTender.API.Controllers
 {
@@ -26,27 +26,58 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("signup")]
-        public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
+public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
+{
+    if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
+    {
+        return BadRequest(new { Message = "Email already exists." });
+    }
+
+    var user = new ApplicationUser
+    {
+        FullName = request.FullName,
+        Email = request.Email,
+        Plan = "free",
+        QuotaPoints = 200
+    };
+
+    var passwordHasher = new PasswordHasher<ApplicationUser>();
+    user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+
+    _dbContext.Users.Add(user);
+    await _dbContext.SaveChangesAsync();
+
+    var token = GenerateJwtToken(user);
+    return Ok(new { Token = token, Message = "User created successfully" });
+}
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
+            var adminUser = _configuration["AdminConfig:Username"];
+            var adminPass = _configuration["AdminConfig:Password"];
+
+            if (!string.IsNullOrEmpty(adminUser) && request.Username == adminUser && request.Password == adminPass)
             {
-                return BadRequest(new { Message = "Email already exists." });
+                var adminToken = GenerateAdminJwtToken(adminUser, "Committee");
+                return Ok(new { Token = adminToken, Message = "Login Successful", Plan = "annually", FullName = "Committee Admin" });
             }
 
-            var user = new ApplicationUser
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
+
+            if (user != null)
             {
-                FullName = request.FullName,
-                Email = request.Email,
-                PasswordHash = HashPassword(request.Password),
-                Plan = "free", // Default plan initially
-                QuotaPoints = 200 // Default Quota
-            };
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
 
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
+                if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    var token = GenerateJwtToken(user);
+                    return Ok(new { Token = token, Message = "Login Successful", Plan = user.Plan, FullName = user.FullName });
+                }
+            }
 
-            var token = GenerateJwtToken(user);
-            return Ok(new { Token = token, Message = "User created successfully" });
+            return Unauthorized(new { Message = "Invalid email or password" });
         }
 
         [HttpPost("login")]
