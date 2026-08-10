@@ -211,6 +211,7 @@ namespace MediTender.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Committee")]
         [HttpDelete("reset-system")]
         public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)
         {
@@ -260,7 +261,6 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while resetting the system." });
             }
         }
-
         public class FileUploadRequest
         {
             public IFormFile? File { get; set; }
