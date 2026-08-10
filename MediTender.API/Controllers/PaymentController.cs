@@ -34,7 +34,7 @@ namespace MediTender.API.Controllers
                 var iframeUrl = await _paymobService.GetPaymentIframeUrlAsync(amount, userEmail, request.PlanType);
                 return Ok(new { CheckoutUrl = iframeUrl });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, new { Message = "Error connecting to payment gateway." });
             }

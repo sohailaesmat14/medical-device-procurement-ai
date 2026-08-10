@@ -54,7 +54,7 @@ namespace MediTender.API.Services
                     country = "EG", last_name = "Account", state = "NA"
                 },
                 currency = "EGP",
-                integration_id = int.Parse(integrationId)
+                integration_id = int.Parse(integrationId!)
             };
             var paymentKeyResponse = await PostAsync($"{_baseUrl}/acceptance/payment_keys", paymentKeyPayload);
             var paymentToken = paymentKeyResponse.GetProperty("token").GetString();
