@@ -83,7 +83,7 @@ namespace MediTender.API.Services
                     
                     offer.TotalPrice = doc.RootElement.GetProperty("TotalPrice").GetDecimal();
                     string notes = doc.RootElement.GetProperty("Notes").GetString() ?? "";
-                    
+                    offer.Notes = notes;
                     if (offer.TotalPrice <= 0)
                     {
                         offer.AiRejectionReason = "Warning: Could not detect a valid total price from the financial document.";
