@@ -225,7 +225,14 @@
                 return msg;
             };
             window.addEventListener("beforeunload", unloadWarning);
-
+            function updateProgress(percent, message) {
+                const progressFill = document.getElementById("progressFill");
+                const statusText = document.getElementById("statusText");
+                
+                progressFill.style.width = `${percent}%`;
+                progressFill.innerText = `${percent}%`;
+                statusText.innerText = message;
+            }
             document.addEventListener("DOMContentLoaded", async () => {
                 const standardFile = sessionStorage.getItem(
                     "meditender_standard_file",
@@ -260,10 +267,7 @@
                 progressWrapper.style.display = "block";
 
                 try {
-                    progressFill.style.width = "10%";
-                    progressFill.innerText = "10%";
-                    statusText.innerText =
-                        "Phase 1: Auto-extracting mandatory specifications from Tender Standard...";
+                    updateProgress(10, "Phase 1: Auto-extracting mandatory specifications from Tender Standard...");
 
                     let extractRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
                         method: 'POST', 
@@ -283,7 +287,7 @@
                         );
 
                     let extractData = await extractRes.json();
-                    let requirements = extractData.requirements;
+                    let requirements = extractData.requirements || extractData; 
 
                     if (!requirements || requirements.length === 0) {
                         throw new Error(
@@ -291,18 +295,10 @@
                         );
                     }
 
-                    progressFill.style.width = "30%";
-                    progressFill.innerText = "30%";
-                    statusText.innerText = `Phase 2: Semantic matching and comparing ${vendors.length} vendors... (This may take a few minutes)`;
-
-                    let simulatedProgress = 30;
-                    let progressInterval = setInterval(() => {
-                        if (simulatedProgress < 95) {
-                            simulatedProgress += 1;
-                            progressFill.style.width = simulatedProgress + "%";
-                            progressFill.innerText = simulatedProgress + "%";
-                        }
-                    }, 2000);
+                    updateProgress(45, "Phase 1 Complete! Standard requirements extracted successfully.");
+                    await new Promise(r => setTimeout(r, 1000));
+                    updateProgress(55, "Phase 2: AI Agents evaluating Vendor Offers in parallel. This may take a moment...");
+                    
 
                     let compareRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
                         method: 'POST',
@@ -310,10 +306,11 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({ tenderId: parseInt(currentTenderId), vendorNames: vendors }) // بدل tenderId: 1
+                        body: JSON.stringify({ 
+                            tenderId: parseInt(currentTenderId), 
+                            vendorNames: JSON.parse(vendorsRaw)
+                        }) 
                     });
-
-                    clearInterval(progressInterval);
 
                     if (!compareRes.ok)
                         throw new Error(
@@ -322,21 +319,22 @@
 
                     let evaluations = await compareRes.json();
 
-                    progressFill.style.width = "100%";
-                    progressFill.innerText = "100%";
+                    updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
+                    
                     sessionStorage.setItem(
                         "meditender_evaluations",
                         JSON.stringify(evaluations),
                     );
 
-                    statusText.innerText =
-                        "Analysis Complete! Redirecting to Decision Matrix...";
                     window.onbeforeunload = null;
 
                     setTimeout(() => {
                         window.location.replace("dashboard.html");
                     }, 1000);
                 } catch (err) {
+                    const progressFill = document.getElementById("progressFill");
+                    if(progressFill) progressFill.style.backgroundColor = "#dc3545"; 
+                    updateProgress(100, "System Error: " + err.message); 
                     showErrorState("System Error: " + err.message);
                 }
             });
