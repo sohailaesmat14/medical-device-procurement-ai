@@ -248,22 +248,41 @@
             }
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/update-plan`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ email: email, plan: planType, quotaPoints: quotaPoints })
-                });
+                if (planType === 'free') {
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/update-plan`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ email: email, plan: planType, quotaPoints: quotaPoints })
+                    });
 
-                if (response.ok) {
-                    sessionStorage.setItem("meditender_plan", planType);
-                    sessionStorage.setItem("meditender_quota", quotaPoints);
-                    alert(`Selected ${planType.toUpperCase()} Plan successfully! Redirecting to Upload Page...`);
-                    window.location.href = "upload.html";
+                    if (response.ok) {
+                        sessionStorage.setItem("meditender_plan", planType);
+                        sessionStorage.setItem("meditender_quota", quotaPoints);
+                        alert(`Selected ${planType.toUpperCase()} Plan successfully! Redirecting to Upload Page...`);
+                        window.location.href = "upload.html";
+                    } else {
+                        alert("Failed to update subscription plan.");
+                    }
+                    
                 } else {
-                    alert("Failed to update subscription plan.");
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Payment/initiate`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ email: email, planType: planType })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        window.location.href = data.checkoutUrl; 
+                    } else {
+                        alert("Failed to initiate payment.");
+                    }
                 }
             } catch (error) {
                 alert("Server connection error.");

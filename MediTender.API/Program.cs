@@ -35,6 +35,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IComparisonService, ComparisonService>();
 builder.Services.AddScoped<IStandardExtractionService, StandardExtractionService>();
+builder.Services.AddHttpClient<IPaymobService, PaymobService>();
 
 builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 {
