@@ -78,31 +78,8 @@ public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
             }
 
             return Unauthorized(new { Message = "Invalid email or password" });
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            var adminUser = _configuration["AdminConfig:Username"];
-            var adminPass = _configuration["AdminConfig:Password"];
-
-            if (!string.IsNullOrEmpty(adminUser) && request.Username == adminUser && request.Password == adminPass)
-            {
-                var adminToken = GenerateAdminJwtToken(adminUser, "Committee");
-                return Ok(new { Token = adminToken, Message = "Login Successful", Plan = "annually", FullName = "Committee Admin" });
-            }
-
-            var hashedInputPassword = HashPassword(request.Password);
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Username && u.PasswordHash == hashedInputPassword);
-
-            if (user != null)
-            {
-                var token = GenerateJwtToken(user);
-                return Ok(new { Token = token, Message = "Login Successful", Plan = user.Plan, FullName = user.FullName });
-            }
-
-            return Unauthorized(new { Message = "Invalid email or password" });
-        }
+        }        
+        
         [HttpPost("update-plan")]
         [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)

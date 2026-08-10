@@ -24,8 +24,13 @@ namespace MediTender.API.Controllers
         [Authorize]
         public async Task<IActionResult> InitiatePayment([FromBody] PaymentRequest request)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value 
                             ?? request.Email;
+
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                return BadRequest(new { Message = "User email is missing." });
+            }
 
             decimal amount = request.PlanType == "monthly" ? 2500 : 22000;
 
@@ -39,8 +44,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "Error connecting to payment gateway." });
             }
         }
-
-        // Paymob will call this endpoint automatically after payment
+        
         [HttpPost("webhook")]
         public async Task<IActionResult> PaymobWebhook([FromQuery] string hmac, [FromBody] JsonElement payload)
         {
