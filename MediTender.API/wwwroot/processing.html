@@ -269,7 +269,7 @@
                 try {
                     updateProgress(10, "Phase 1: Auto-extracting mandatory specifications from Tender Standard...");
 
-                    let extractRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
+                    let extractRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
                         method: 'POST', 
                         headers: { 
                             'Content-Type': 'application/json', 
@@ -278,7 +278,8 @@
                         body: JSON.stringify({
                             fileName: standardFile,
                             tenderId: parseInt(currentTenderId)
-                        })
+                        }),
+                        timeout: 90000 
                     });
                     
                     if (!extractRes.ok)
@@ -300,7 +301,7 @@
                     updateProgress(55, "Phase 2: AI Agents evaluating Vendor Offers in parallel. This may take a moment...");
                     
 
-                    let compareRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
+                    let compareRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
@@ -309,7 +310,8 @@
                         body: JSON.stringify({ 
                             tenderId: parseInt(currentTenderId), 
                             vendorNames: JSON.parse(vendorsRaw)
-                        }) 
+                        }),
+                        timeout: 120000 
                     });
 
                     if (!compareRes.ok)
@@ -332,10 +334,17 @@
                         window.location.replace("dashboard.html");
                     }, 1000);
                 } catch (err) {
+                    let errorMessage = err.message;
+                    
+                    if (err.name === 'AbortError') {
+                        errorMessage = "The request timed out. The server or AI is taking too long to respond. Please try again.";
+                    }
+
                     const progressFill = document.getElementById("progressFill");
-                    if(progressFill) progressFill.style.backgroundColor = "#dc3545"; 
-                    updateProgress(100, "System Error: " + err.message); 
-                    showErrorState("System Error: " + err.message);
+                    if (progressFill) progressFill.style.backgroundColor = "#dc3545"; 
+                    
+                    updateProgress(100, "System Error: " + errorMessage); 
+                    showErrorState("System Error: " + errorMessage);
                 }
             });
         </script>
