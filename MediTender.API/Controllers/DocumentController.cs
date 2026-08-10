@@ -186,26 +186,30 @@ namespace MediTender.API.Controllers
             try
             {
                 _dbContext.VendorOffers.RemoveRange(_dbContext.VendorOffers);
-        _dbContext.EvaluationDetails.RemoveRange(_dbContext.EvaluationDetails);
-        _dbContext.OfferEvaluations.RemoveRange(_dbContext.OfferEvaluations);
-        _dbContext.Tenders.RemoveRange(_dbContext.Tenders);
-        _dbContext.TenderInteractions.RemoveRange(_dbContext.TenderInteractions);
-        await _dbContext.SaveChangesAsync();
+                _dbContext.EvaluationDetails.RemoveRange(_dbContext.EvaluationDetails);
+                _dbContext.OfferEvaluations.RemoveRange(_dbContext.OfferEvaluations);
+                _dbContext.Standards.RemoveRange(_dbContext.Standards); 
+                _dbContext.TenderInteractions.RemoveRange(_dbContext.TenderInteractions);
+                _dbContext.Tenders.RemoveRange(_dbContext.Tenders);
+
+                await _dbContext.SaveChangesAsync();
 
                 if (_dbContext.Database.IsSqlServer())
                 {
                     await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Tenders', RESEED, 0)");
+                    await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Standards', RESEED, 0)"); 
                     await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('VendorOffers', RESEED, 0)");
                     await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('OfferEvaluations', RESEED, 0)");
+                    await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('EvaluationDetails', RESEED, 0)"); 
+                    await _dbContext.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('TenderInteractions', RESEED, 0)"); 
                 }
                 else if (_dbContext.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL") 
                 {
-                    await _dbContext.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Tenders\", \"VendorOffers\", \"OfferEvaluations\" RESTART IDENTITY CASCADE");
+                    await _dbContext.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Tenders\", \"Standards\", \"VendorOffers\", \"OfferEvaluations\" , \"EvaluationDetails\", \"TenderInteractions\" RESTART IDENTITY CASCADE");
                 }
                 else if (_dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite") 
                 {
-                    await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name IN ('Tenders', 'VendorOffers', 'OfferEvaluations')");
-                }
+                    await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name IN ('Tenders', 'Standards', 'VendorOffers', 'OfferEvaluations', 'EvaluationDetails', 'TenderInteractions')");                }
 
                 await qdrantClient.DeleteCollectionAsync("meditender_collection_v2");
                 await qdrantClient.CreateCollectionAsync("meditender_collection_v2", 
