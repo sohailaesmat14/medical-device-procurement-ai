@@ -166,11 +166,10 @@
                     sessionStorage.setItem("jwt_token", data.token);
                     sessionStorage.setItem("user_name", data.fullName || user);
                     
-                    const hasPlan = sessionStorage.getItem("meditender_plan");
-                    if (hasPlan) {
+                    if (data.plan) {
+                        sessionStorage.setItem("meditender_plan", data.plan);
                         window.location.replace("upload.html");
                     } else {
-                        // If no plan, redirect to subscription
                         window.location.replace("subscription.html");
                     }
                 } else {
@@ -185,7 +184,8 @@
                 loginBtn.disabled = false;
                 loginBtn.innerText = "Sign In";
             }
-        }
+        }    
+    
     </script>
 </body>
 </html>
