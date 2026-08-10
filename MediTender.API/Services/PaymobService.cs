@@ -65,9 +65,43 @@ namespace MediTender.API.Services
 
         public bool VerifyHmac(string receivedHmac, string jsonPayload)
         {
-
             var hmacSecret = _configuration["Paymob:HmacSecret"];
-            return true; 
+            if (string.IsNullOrEmpty(hmacSecret)) return false;
+
+            using var doc = JsonDocument.Parse(jsonPayload);
+            var obj = doc.RootElement.GetProperty("obj");
+
+            var amountCents = obj.GetProperty("amount_cents").GetRawText();
+            var createdAt = obj.GetProperty("created_at").GetString();
+            var currency = obj.GetProperty("currency").GetString();
+            var errorOccured = obj.GetProperty("error_occured").GetBoolean().ToString().ToLower();
+            var hasParentTransaction = obj.GetProperty("has_parent_transaction").GetBoolean().ToString().ToLower();
+            var id = obj.GetProperty("id").GetRawText();
+            var integrationId = obj.GetProperty("integration_id").GetRawText();
+            var is3dSecure = obj.GetProperty("is_3d_secure").GetBoolean().ToString().ToLower();
+            var isAuth = obj.GetProperty("is_auth").GetBoolean().ToString().ToLower();
+            var isCapture = obj.GetProperty("is_capture").GetBoolean().ToString().ToLower();
+            var isRefunded = obj.GetProperty("is_refunded").GetBoolean().ToString().ToLower();
+            var isStandalonePayment = obj.GetProperty("is_standalone_payment").GetBoolean().ToString().ToLower();
+            var isVoided = obj.GetProperty("is_voided").GetBoolean().ToString().ToLower();
+            var orderId = obj.GetProperty("order").GetProperty("id").GetRawText();
+            var owner = obj.GetProperty("owner").GetRawText();
+            var pending = obj.GetProperty("pending").GetBoolean().ToString().ToLower();
+            
+            var sourceData = obj.GetProperty("source_data");
+            var sourceDataPan = sourceData.TryGetProperty("pan", out var pan) ? pan.GetString() : "";
+            var sourceDataSubType = sourceData.TryGetProperty("sub_type", out var subType) ? subType.GetString() : "";
+            var sourceDataType = sourceData.TryGetProperty("type", out var type) ? type.GetString() : "";
+            
+            var success = obj.GetProperty("success").GetBoolean().ToString().ToLower();
+
+            var requestString = $"{amountCents}{createdAt}{currency}{errorOccured}{hasParentTransaction}{id}{integrationId}{is3dSecure}{isAuth}{isCapture}{isRefunded}{isStandalonePayment}{isVoided}{orderId}{owner}{pending}{sourceDataPan}{sourceDataSubType}{sourceDataType}{success}";
+
+            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(hmacSecret));
+            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(requestString));
+            var calculatedHmac = BitConverter.ToString(hash).Replace("-", "").ToLower();
+
+            return calculatedHmac == receivedHmac.ToLower();
         }
 
         private async Task<JsonElement> PostAsync(string url, object payload)
