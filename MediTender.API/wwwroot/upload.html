@@ -589,7 +589,14 @@
                             }),
                         },
                     );
-                    
+
+                    if (!quotaRes.ok) {
+                        const errorData = await quotaRes.json();
+                        throw new Error(
+                            errorData.message || "Quota exceeded or API error.",
+                        );
+                    }
+
                     progressStep.innerText = "Initializing new Tender ID...";
                     const initRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/init-tender`, {
                         method: 'POST',
@@ -601,13 +608,6 @@
                     const currentTenderId = initData.tenderId; 
 
                     sessionStorage.setItem('meditender_current_id', currentTenderId);
-
-                    if (!quotaRes.ok) {
-                        const errorData = await quotaRes.json();
-                        throw new Error(
-                            errorData.message || "Quota exceeded or API error.",
-                        );
-                    }
 
                     statusMsg.style.display = "none";
                     progressBar.style.width = "0%";
@@ -670,7 +670,6 @@
                             {
                                 method: "POST",
                                 headers: {
-                                    "Content-Type": "application/json",
                                     Authorization: `Bearer ${token}`,
                                 },
                                 body: vTechFormData,
@@ -696,7 +695,6 @@
                             {
                                 method: "POST",
                                 headers: {
-                                    "Content-Type": "application/json",
                                     Authorization: `Bearer ${token}`,
                                 },
                                 body: vFinFormData,

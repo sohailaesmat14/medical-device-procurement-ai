@@ -206,18 +206,15 @@
 
         <script>
 
-            const standardFile = sessionStorage.getItem('meditender_standard_file');
-            const vendorsRaw = sessionStorage.getItem('meditender_vendors');
-            const currentTenderId = sessionStorage.getItem('meditender_current_id'); 
-
-            if (!standardFile || !vendorsRaw || !currentTenderId) {
-                showErrorState("Error: Missing data or Tender ID from upload step.");
-                return;
-            }
-
             if (!sessionStorage.getItem("jwt_token")) {
                 window.location.replace("login.html");
             }
+
+            const token = sessionStorage.getItem("jwt_token");
+            if (!token) {
+                window.location.replace("login.html");
+            }
+
             const unloadWarning = function (e) {
                 const msg =
                     "Are you sure you want to leave? Your progress will be lost.";
@@ -225,19 +222,26 @@
                 return msg;
             };
             window.addEventListener("beforeunload", unloadWarning);
+
             function updateProgress(percent, message) {
                 const progressFill = document.getElementById("progressFill");
-                const statusText = document.getElementById("statusText");
+                const statusText = document.getElementById("processStatus"); 
                 
-                progressFill.style.width = `${percent}%`;
-                progressFill.innerText = `${percent}%`;
-                statusText.innerText = message;
+                if (progressFill) {
+                    progressFill.style.width = `${percent}%`;
+                    progressFill.innerText = `${percent}%`;
+                }
+                if (statusText) {
+                    statusText.innerText = message;
+                }
             }
+
             document.addEventListener("DOMContentLoaded", async () => {
                 const standardFile = sessionStorage.getItem(
                     "meditender_standard_file",
                 );
                 const vendorsRaw = sessionStorage.getItem("meditender_vendors");
+                const currentTenderId = sessionStorage.getItem("meditender_current_id");
 
                 const statusText = document.getElementById("processStatus");
                 const progressWrapper =
@@ -258,8 +262,8 @@
                     retryBtn.style.display = "inline-block";
                 }
 
-                if (!standardFile || !vendorsRaw) {
-                    showErrorState("Error: Missing data from upload step.");
+                if (!standardFile || !vendorsRaw || !currentTenderId) {
+                    showErrorState("Error: Missing data or Tender ID from upload step.");
                     return;
                 }
 
@@ -303,15 +307,15 @@
 
                     let compareRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({ 
-                            tenderId: parseInt(currentTenderId), 
-                            vendorNames: JSON.parse(vendorsRaw)
+                        body: JSON.stringify({
+                            tenderId: parseInt(currentTenderId),
+                            vendorNames: vendors
                         }),
-                        timeout: 120000 
+                        timeout: 120000
                     });
 
                     if (!compareRes.ok)
@@ -322,12 +326,10 @@
                     let evaluations = await compareRes.json();
 
                     updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
-                    
                     sessionStorage.setItem(
                         "meditender_evaluations",
                         JSON.stringify(evaluations),
                     );
-
                     window.onbeforeunload = null;
 
                     setTimeout(() => {
