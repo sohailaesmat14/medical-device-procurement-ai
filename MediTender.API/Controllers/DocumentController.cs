@@ -199,6 +199,13 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
+            int cost = 10;
+            var quotaResult = await TryConsumeQuotaAsync(cost);
+            if (!quotaResult.Success)
+            {
+                return BadRequest(new { Message = $"❌ Your current balance ({quotaResult.Remaining} points) isn't enough. You need ({cost} points)." });
+            }
+
             try
             {
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId);
@@ -206,11 +213,11 @@ namespace MediTender.API.Controllers
             }
             catch (Exception ex)
             {
+                await RefundQuotaAsync(cost);
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
         }
-
         [Authorize(Roles = "Committee")]
         [HttpDelete("reset-system")]
         public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)
