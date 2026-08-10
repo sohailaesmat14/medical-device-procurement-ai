@@ -32,6 +32,16 @@ namespace MediTender.API.Controllers
             _logger = logger;
         }
 
+        private int GetCurrentUserId()
+        {
+            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                return userId;
+            }
+            return 0;
+        }
+
         [HttpPost("upload-pdf")]
         public async Task<IActionResult> UploadPdfAsync([FromForm] FileUploadRequest request)
         {
@@ -44,6 +54,11 @@ namespace MediTender.API.Controllers
 
             if (request.DocumentType.Contains("Offer") && string.IsNullOrWhiteSpace(request.VendorName))
                 return BadRequest("Vendor name is required for offers.");
+
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
 
             try
             {
@@ -64,7 +79,6 @@ namespace MediTender.API.Controllers
                     return BadRequest("Error: The document text could not be processed into chunks. Please check the file format.");
                 }
                 
-            
                 await _vectorStorageService.SaveChunksToQdrantAsync(request.File.FileName, request.DocumentType, request.VendorName, chunks, request.TenderId);
 
                 return Ok(new { 
@@ -77,15 +91,20 @@ namespace MediTender.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error uploading PDF for DocumentType: {DocumentType}, Vendor: {VendorName}", request.DocumentType, request.VendorName);
-    
-    return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
+                return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
             }
         }        
+
         [HttpPost("ask")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
         {
             if (string.IsNullOrWhiteSpace(request.Question))
                 return BadRequest("Question is required.");
+
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
 
             try
             {
@@ -122,6 +141,11 @@ namespace MediTender.API.Controllers
         {
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
+
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
 
             request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
             int cost = request.VendorNames.Count * 15;
@@ -170,9 +194,13 @@ namespace MediTender.API.Controllers
             if (string.IsNullOrEmpty(request.FileName) || request.TenderId <= 0)
                 return BadRequest("Invalid file name or tender ID.");
 
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
+
             try
             {
-                // هنستخدم request.FileName و request.TenderId
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId);
                 return Ok(requirements);
             }
@@ -182,6 +210,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
         }
+
         [HttpDelete("reset-system")]
         public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)
         {
@@ -211,7 +240,8 @@ namespace MediTender.API.Controllers
                 }
                 else if (_dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite") 
                 {
-                    await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name IN ('Tenders', 'Standards', 'VendorOffers', 'OfferEvaluations', 'EvaluationDetails', 'TenderInteractions')");                }
+                    await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM sqlite_sequence WHERE name IN ('Tenders', 'Standards', 'VendorOffers', 'OfferEvaluations', 'EvaluationDetails', 'TenderInteractions')");                
+                }
 
                 await qdrantClient.DeleteCollectionAsync("meditender_collection_v2");
                 await qdrantClient.CreateCollectionAsync("meditender_collection_v2", 
@@ -230,6 +260,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while resetting the system." });
             }
         }
+
         public class FileUploadRequest
         {
             public IFormFile? File { get; set; }
@@ -238,15 +269,10 @@ namespace MediTender.API.Controllers
             public int TenderId { get; set; } = 1;
         }
         
-        // --- 🟢 New Database-Driven Quota System ---
-
         private async Task<(bool Success, int Remaining)> TryConsumeQuotaAsync(int cost)
         {
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
-            // Fallback for admin account
-            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
-                return (true, 9999);
+            int userId = GetCurrentUserId();
+            if (userId == 0) return (true, 9999);
 
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null) return (false, 0);
@@ -263,8 +289,8 @@ namespace MediTender.API.Controllers
 
         private async Task RefundQuotaAsync(int amount)
         {
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId)) return;
+            int userId = GetCurrentUserId();
+            if (userId == 0) return;
 
             var user = await _dbContext.Users.FindAsync(userId);
             if (user != null)
@@ -278,9 +304,9 @@ namespace MediTender.API.Controllers
         public async Task<IActionResult> CheckQuota([FromBody] QuotaRequest request)
         {
             int cost = request.VendorCount * 15;
+            int userId = GetCurrentUserId();
             
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            if (userId == 0)
                 return Ok(new { Success = true, RemainingQuota = 9999 });
 
             var user = await _dbContext.Users.FindAsync(userId);
@@ -292,17 +318,19 @@ namespace MediTender.API.Controllers
             return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
         }
 
-        private string GetCurrentUsername()
-        {
-            return User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "sub")?.Value ?? "committee";
-        }
         public class QuotaRequest
         {
             public int VendorCount { get; set; }
         }
+
         [HttpPost("override-evaluation")]
         public async Task<IActionResult> OverrideEvaluation([FromBody] OverrideRequest request)
         {
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
+
             try
             {
                 var evaluation = await _dbContext.OfferEvaluations
@@ -355,10 +383,14 @@ namespace MediTender.API.Controllers
         {
             try
             {
+                int userId = GetCurrentUserId();
+                if (userId == 0) return Unauthorized(new { Message = "Invalid user token." });
+
                 var tender = new Tender 
                 { 
                     Title = $"Tender - {DateTime.UtcNow:yyyy-MM-dd HH:mm}", 
-                    Description = "Auto-generated via AI Workflow" 
+                    Description = "Auto-generated via AI Workflow",
+                    UserId = userId
                 };
                 
                 _dbContext.Tenders.Add(tender);
@@ -372,15 +404,22 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while creating the tender." });
             }
         }
+        
         public class OverrideRequest
         {
             public int TenderId { get; set; }
             public string VendorName { get; set; } = string.Empty;
             public string Requirement { get; set; } = string.Empty;
         }
+
         [HttpPost("override-vendor-decision")]
         public async Task<IActionResult> OverrideVendorDecision([FromBody] VendorOverrideRequest request)
         {
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
+
             try
             {
                 var evaluation = await _dbContext.OfferEvaluations
@@ -390,7 +429,6 @@ namespace MediTender.API.Controllers
                 if (evaluation == null) 
                     return NotFound("Evaluation not found in database.");
 
-                // Loop through all pending mandatory items and approve them
                 foreach (var detail in evaluation.Details.Where(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned")))
                 {
                     detail.Status = "Met";
@@ -398,7 +436,6 @@ namespace MediTender.API.Controllers
                     detail.Score = 20;
                 }
 
-                // Recalculate totals
                 evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
                 evaluation.FinalDecision = "Recommended for Acceptance";
 
@@ -424,6 +461,7 @@ namespace MediTender.API.Controllers
             public int TenderId { get; set; }
             public string VendorName { get; set; } = string.Empty;
         }
+        
         public class ExtractStandardRequest
         {
             public string FileName { get; set; } = string.Empty;
