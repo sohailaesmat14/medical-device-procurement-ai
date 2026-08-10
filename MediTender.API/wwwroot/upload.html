@@ -561,8 +561,7 @@
             async function executeUploadSequence(standardFile) {
                 const statusMsg = document.getElementById("statusMessage");
                 const startBtn = document.getElementById("startBtn");
-                const progressContainer =
-                    document.getElementById("progressContainer");
+                const progressContainer = document.getElementById("progressContainer");
                 const progressBar = document.getElementById("progressBar");
                 const progressText = document.getElementById("progressText");
                 const progressStep = document.getElementById("progressStep");
@@ -574,25 +573,20 @@
                     progressStep.innerText = "Checking AI Quota...";
                     progressContainer.style.display = "block";
 
-                    const quotaRes = await fetch(
-                        "http://localhost:5172/api/Document/check-quota",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                                vendorCount: vendorQueue.length,
-                            }),
+                    const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
                         },
-                    );
+                        body: JSON.stringify({
+                            vendorCount: vendorQueue.length,
+                        }),
+                    });
 
                     if (!quotaRes.ok) {
                         const errorData = await quotaRes.json();
-                        throw new Error(
-                            errorData.message || "Quota exceeded or API error.",
-                        );
+                        throw new Error(errorData.message || "Quota exceeded or API error.");
                     }
 
                     progressStep.innerText = "Initializing new Tender ID...";
@@ -617,40 +611,29 @@
 
                     function updateProgress(stepMessage) {
                         completedFiles++;
-                        let percent = Math.round(
-                            (completedFiles / totalFiles) * 100,
-                        );
+                        let percent = Math.round((completedFiles / totalFiles) * 100);
                         progressBar.style.width = percent + "%";
                         progressText.innerText = percent + "%";
                         progressStep.innerText = stepMessage;
                     }
 
-                    progressStep.innerText =
-                        "Uploading Standard Specifications to Database...";
+                    progressStep.innerText = "Uploading Standard Specifications to Database...";
                     const stdFormData = new FormData();
                     stdFormData.append("file", standardFile);
                     stdFormData.append("documentType", "Standard");
                     stdFormData.append("tenderId", currentTenderId);
 
-                    let res = await fetch(
-                        "http://localhost:5172/api/Document/upload-pdf",
-                        {
-                            method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                            body: stdFormData,
+                    let res = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`,
                         },
-                    );
+                        body: stdFormData,
+                    });
 
-                    if (!res.ok)
-                        throw new Error(
-                            "Failed to upload standard specifications.",
-                        );
+                    if (!res.ok) throw new Error("Failed to upload standard specifications.");
 
-                    updateProgress(
-                        "Standard Specifications uploaded successfully.",
-                    );
+                    updateProgress("Standard Specifications uploaded successfully.");
 
                     let uploadedVendorNames = [];
                     for (let i = 0; i < vendorQueue.length; i++) {
@@ -663,23 +646,15 @@
                         vTechFormData.append("vendorName", v.name);
                         vTechFormData.append("tenderId", currentTenderId);
 
-                        let vTechRes = await fetch(
-                            "http://localhost:5172/api/Document/upload-pdf",
-                            {
-                                method: "POST",
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                },
-                                body: vTechFormData,
+                        let vTechRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${token}`,
                             },
-                        );
-                        if (!vTechRes.ok)
-                            throw new Error(
-                                `Failed to upload technical offer for ${v.name}.`,
-                            );
-                        updateProgress(
-                            `Technical Offer for ${v.name} uploaded successfully.`,
-                        );
+                            body: vTechFormData,
+                        });
+                        if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
+                        updateProgress(`Technical Offer for ${v.name} uploaded successfully.`);
 
                         progressStep.innerText = `Uploading Financial offer for vendor: ${v.name}...`;
                         const vFinFormData = new FormData();
@@ -688,38 +663,23 @@
                         vFinFormData.append("vendorName", v.name);
                         vFinFormData.append("tenderId", currentTenderId);
 
-                        let vFinRes = await fetch(
-                            "http://localhost:5172/api/Document/upload-pdf",
-                            {
-                                method: "POST",
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                },
-                                body: vFinFormData,
+                        let vFinRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${token}`,
                             },
-                        );
-                        if (!vFinRes.ok)
-                            throw new Error(
-                                `Failed to upload financial offer for ${v.name}.`,
-                            );
-                        updateProgress(
-                            `Financial Offer for ${v.name} uploaded successfully.`,
-                        );
+                            body: vFinFormData,
+                        });
+                        if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
+                        updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
 
                         uploadedVendorNames.push(v.name);
                     }
 
-                    sessionStorage.setItem(
-                        "meditender_standard_file",
-                        standardFile.name,
-                    );
-                    sessionStorage.setItem(
-                        "meditender_vendors",
-                        JSON.stringify(uploadedVendorNames),
-                    );
+                    sessionStorage.setItem("meditender_standard_file", standardFile.name);
+                    sessionStorage.setItem("meditender_vendors", JSON.stringify(uploadedVendorNames));
 
-                    progressStep.innerText =
-                        "All files uploaded successfully! Redirecting to engine...";
+                    progressStep.innerText = "All files uploaded successfully! Redirecting to engine...";
                     progressBar.style.backgroundColor = "#10b981";
                     progressText.style.color = "#10b981";
 
@@ -732,7 +692,8 @@
                     statusMsg.innerText = "Error: " + err.message;
                     startBtn.disabled = false;
                 }
-            }
+            }            
+            
             document.addEventListener("DOMContentLoaded", () => {
                 const userName = sessionStorage.getItem("user_name") || "Committee Member";
                 

@@ -925,20 +925,17 @@
                 if (!vendor) return;
 
                 try {
-                    const response = await fetch(
-                        "http://localhost:5172/api/Document/override-vendor-decision",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                                tenderId: vendor.tenderId,
-                                vendorName: vendorName,
-                            }),
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/override-vendor-decision`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
                         },
-                    );
+                        body: JSON.stringify({
+                            tenderId: vendor.tenderId,
+                            vendorName: vendorName,
+                        }),
+                    });
 
                     if (!response.ok) throw new Error(await response.text());
 
@@ -949,8 +946,7 @@
                                 d.status === "Not Mentioned")
                         ) {
                             d.status = "Met";
-                            d.evidence =
-                                "✅ Vendor manually approved by committee.";
+                            d.evidence = "✅ Vendor manually approved by committee.";
                             d.score = 20;
                         }
                     });
@@ -970,7 +966,7 @@
                     alert("Failed to approve vendor: " + err.message);
                 }
             };
-
+            
             function populateVendorFilter() {
                 const vendorSelect = document.getElementById("vendorFilter");
                 globalEvaluations.forEach((ev) => {
@@ -1004,21 +1000,18 @@
                 if (!vendor) return;
 
                 try {
-                    const response = await fetch(
-                        "http://localhost:5172/api/Document/override-evaluation",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                                tenderId: vendor.tenderId,
-                                vendorName: vendorName,
-                                requirement: reqText,
-                            }),
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/override-evaluation`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
                         },
-                    );
+                        body: JSON.stringify({
+                            tenderId: vendor.tenderId,
+                            vendorName: vendorName,
+                            requirement: reqText,
+                        }),
+                    });
 
                     if (!response.ok) throw new Error(await response.text());
 
@@ -1061,12 +1054,10 @@
                         generateBIDashboard();
                     }
                 } catch (err) {
-                    alert(
-                        "Failed to save override to database: " + err.message,
-                    );
+                    alert("Failed to save override to database: " + err.message);
                 }
             };
-
+            
             function applyTableFilters() {
                 const searchText = document
                     .getElementById("searchInput")
