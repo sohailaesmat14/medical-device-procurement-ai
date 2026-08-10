@@ -21,7 +21,7 @@ namespace MediTender.API.Services
             _dbContext = dbContext;
         }
 
-        public async Task<List<Standard>> ExtractRequirementsAsync(string fileName, int tenderId)
+        public async Task<List<Standard>> ExtractRequirementsAsync(string fileName, int tenderId)        
         {
             var searchVector = await _geminiService.GetEmbeddingAsync("mandatory technical specifications, requirements, physical characteristics, performance parameters");
 
@@ -31,6 +31,7 @@ namespace MediTender.API.Services
             var searchResults = await _qdrantClient.SearchAsync(
                 collectionName: _collectionName,
                 vector: searchVector,
+                filter: filter,
                 limit: 100);
 
             var contextBuilder = new StringBuilder();
@@ -52,10 +53,10 @@ namespace MediTender.API.Services
             Set 'IsMandatory' to true ONLY IF the requirement explicitly contains words like 'Mandatory', 'Must', 'Shall', or 'Required'. If it contains words like 'Preferable', 'Optional', or has no strict enforcing word, you MUST set 'IsMandatory' to false.
 
             Return ONLY a valid JSON array of objects. Each object must exactly match the C# model properties and have the following keys:
-            - ""ItemName"": string (a short title or category for the requirement, e.g., 'Display', 'Battery', 'Dimensions', 'Power Supply')
-            - ""Description"": string (a brief summary of what this specification entails)
-            - ""RequirementText"": string (the exact technical specification from the context)
-            - ""IsMandatory"": boolean (true if mandatory, false if optional)
+            - ""ItemName"": string
+            - ""Description"": string
+            - ""RequirementText"": string
+            - ""IsMandatory"": boolean
             
             Do not include any markdown formatting or json code blocks.
 
@@ -100,7 +101,7 @@ namespace MediTender.API.Services
             {
                 throw new Exception("AI returned invalid JSON format. Please check the inner exception for details.", ex);
             }
-        }
+        }    
     }
 
     public class StandardExtractionDto
