@@ -173,6 +173,12 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
+            var user = await _dbContext.Users.FindAsync(new object[] { userId }, cancellationToken);
+            if (user != null && user.Plan == "free" && request.VendorNames.Count > 2)
+            {
+                return BadRequest(new { Message = "Free plan allows a maximum of 2 vendors per evaluation. Please upgrade your plan." });
+            }
+
             request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
             int cost = request.VendorNames.Count * 15;
             
@@ -206,7 +212,6 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred during vendor comparison. Please review the logs." });
             }
         }
-
         public class MultiComparisonRequest 
         { 
             public int TenderId { get; set; } = 1; 
@@ -376,12 +381,16 @@ namespace MediTender.API.Controllers
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null) return Unauthorized();
 
+            if (user.Plan == "free" && request.VendorCount > 2)
+            {
+                return BadRequest(new { Success = false, Message = "❌ Free plan limits evaluations to a maximum of 2 vendors per tender. Please upgrade your plan." });
+            }
+
             if (user.QuotaPoints >= cost)
                 return Ok(new { Success = true, RemainingQuota = user.QuotaPoints });
                 
             return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
         }
-
         public class QuotaRequest
         {
             public int VendorCount { get; set; }
