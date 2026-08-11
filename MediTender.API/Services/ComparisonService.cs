@@ -1,14 +1,20 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using MediTender.API.Models;
 using MediTender.API.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace MediTender.API.Services
-{   
+{
     public class ComparisonService : IComparisonService
     {
         private readonly ILogger<ComparisonService> _logger;
@@ -88,142 +94,146 @@ namespace MediTender.API.Services
                         Details = new List<EvaluationDetail>()
                     };
 
-                    try
+                    var guardFilter = new Filter();
+                    guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "tenderId", Match = new Match { Keyword = tenderId.ToString() } } });
+                    guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "documentType", Match = new Match { Keyword = "TechnicalOffer" } } });
+                    guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "vendorName", Match = new Match { Keyword = vendor } } });
+
+                    var guardCheck = await _qdrantClient.SearchAsync(_collectionName, reqEmbeddings.First(), guardFilter, limit: 1, cancellationToken: cancellationToken);
+                    
+                    if (guardCheck.Count == 0)
                     {
-                        var contextBuilder = new StringBuilder();
-                        
-                        var guardFilter = new Filter();
-                        guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "tenderId", Match = new Match { Keyword = tenderId.ToString() } } });
-                        guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "documentType", Match = new Match { Keyword = "TechnicalOffer" } } });
-                        guardFilter.Must.Add(new Condition { Field = new FieldCondition { Key = "vendorName", Match = new Match { Keyword = vendor } } });
+                        throw new Exception($"[Data Missing] No Technical Offer found for vendor '{vendor}' under Tender ID '{tenderId}'. Database IDs might be out of sync. Please hit Reset System and try again.");
+                    }
+                    
+                    int batchSize = 7;
+                    for (int b = 0; b < requirements.Count; b += batchSize)
+                    {
+                        var reqBatch = requirements.Skip(b).Take(batchSize).ToList();
+                        var reqBatchEmbeddings = reqEmbeddings.Skip(b).Take(batchSize).ToList();
 
-                        var guardCheck = await _qdrantClient.SearchAsync(_collectionName, reqEmbeddings.First(), guardFilter, limit: 1, cancellationToken: cancellationToken);
-                        
-                        if (guardCheck.Count == 0)
+                        try
                         {
-                            throw new Exception($"[Data Missing] No Technical Offer found for vendor '{vendor}' under Tender ID '{tenderId}'. Database IDs might be out of sync. Please hit Reset System and try again.");
-                        }
-                        
-                        for (int i = 0; i < requirements.Count; i++)
-                        {
-                            var req = requirements[i];
-                            if (i >= reqEmbeddings.Count) break;
-                            var reqEmbedding = reqEmbeddings[i]; 
+                            var contextBuilder = new StringBuilder();
                             
-                            var filter = new Filter();
-                            filter.Must.Add(new Condition { Field = new FieldCondition { Key = "tenderId", Match = new Match { Keyword = tenderId.ToString() } } });
-                            filter.Must.Add(new Condition { Field = new FieldCondition { Key = "documentType", Match = new Match { Keyword = "TechnicalOffer" } } });
-                            filter.Must.Add(new Condition { Field = new FieldCondition { Key = "vendorName", Match = new Match { Keyword = vendor } } });
-
-                            var searchResults = await _qdrantClient.SearchAsync(_collectionName, reqEmbedding, filter, limit: 8, cancellationToken: cancellationToken);
-
-                            foreach (var result in searchResults)
+                            for (int i = 0; i < reqBatch.Count; i++)
                             {
-                                if (result.Payload.TryGetValue("text", out var textValue))
-                                    contextBuilder.AppendLine(textValue.StringValue);
-                            }
-                        }
+                                var reqEmbedding = reqBatchEmbeddings[i]; 
+                                
+                                var filter = new Filter();
+                                filter.Must.Add(new Condition { Field = new FieldCondition { Key = "tenderId", Match = new Match { Keyword = tenderId.ToString() } } });
+                                filter.Must.Add(new Condition { Field = new FieldCondition { Key = "documentType", Match = new Match { Keyword = "TechnicalOffer" } } });
+                                filter.Must.Add(new Condition { Field = new FieldCondition { Key = "vendorName", Match = new Match { Keyword = vendor } } });
 
-                        var reqsJson = JsonSerializer.Serialize(requirements.Select(r => new { r.Id, r.RequirementText, r.IsMandatory }));
+                                var searchResults = await _qdrantClient.SearchAsync(_collectionName, reqEmbedding, filter, limit: 5, cancellationToken: cancellationToken);
 
-                        var prompt = $@"
-                        You are a Biomedical Procurement Expert. Evaluate the following JSON list of requirements against the provided document context from vendor '{vendor}'.
-                        Requirements List:
-                        {reqsJson}
-
-                        Context:
-                        '{contextBuilder}'
-
-                        Return ONLY a valid JSON array of objects. Each object must exactly match a requirement and have the following keys:
-                        
-                        - ""Id"": integer (MUST exactly match the Id from the provided list)
-                        - ""Status"": string (MUST BE EXACTLY ONE OF: ""Met"", ""Partially Met"", ""Not Met"", or ""Not Mentioned"". If there is no evidence or the context does not specify, use ""Not Mentioned"")
-                        - ""Evidence"": Exact quote from the context supporting the status. If no context exists, return ""No evidence found.""
-                        - ""Score"": integer from 0 to 10.";
-
-                        var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true);
-                        
-                        int startIndex = aiResponse.IndexOf('[');
-                        int endIndex = aiResponse.LastIndexOf(']');
-                        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex)
-                        {
-                            var cleanedJson = aiResponse.Substring(startIndex, endIndex - startIndex + 1);
-                            var parsedArray = JsonSerializer.Deserialize<JsonElement>(cleanedJson);
-
-                            for (int i = 0; i < requirements.Count; i++)
-                            {
-                                var req = requirements[i];
-                                JsonElement aiDetail = default;
-                                bool matchFound = false;
-
-                                if (parsedArray.ValueKind == JsonValueKind.Array)
+                                foreach (var result in searchResults)
                                 {
-                                    foreach (var item in parsedArray.EnumerateArray())
+                                    if (result.Payload.TryGetValue("text", out var textValue))
+                                        contextBuilder.AppendLine(textValue.StringValue);
+                                }
+                            }
+
+                            var reqsJson = JsonSerializer.Serialize(reqBatch.Select(r => new { r.Id, r.RequirementText, r.IsMandatory }));
+
+                            var prompt = $@"
+                            You are a Biomedical Procurement Expert. Evaluate the following JSON list of requirements against the provided document context from vendor '{vendor}'.
+                            Requirements List:
+                            {reqsJson}
+
+                            Context:
+                            '{contextBuilder}'
+
+                            Return ONLY a valid JSON array of objects. Each object must exactly match a requirement and have the following keys:
+                            - ""Id"": integer (MUST exactly match the Id from the provided list)
+                            - ""Status"": string (MUST BE EXACTLY ONE OF: ""Met"", ""Partially Met"", ""Not Met"", or ""Not Mentioned"". If there is no evidence or the context does not specify, use ""Not Mentioned"")
+                            - ""Evidence"": Exact quote from the context supporting the status. If no context exists, return ""No evidence found.""
+                            - ""Score"": integer from 0 to 10.";
+
+                            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true, cancellationToken: cancellationToken);
+                            
+                            int startIndex = aiResponse.IndexOf('[');
+                            int endIndex = aiResponse.LastIndexOf(']');
+                            if (startIndex != -1 && endIndex != -1 && endIndex > startIndex)
+                            {
+                                var cleanedJson = aiResponse.Substring(startIndex, endIndex - startIndex + 1);
+                                var parsedArray = JsonSerializer.Deserialize<JsonElement>(cleanedJson);
+
+                                for (int i = 0; i < reqBatch.Count; i++)
+                                {
+                                    var req = reqBatch[i];
+                                    JsonElement aiDetail = default;
+                                    bool matchFound = false;
+
+                                    if (parsedArray.ValueKind == JsonValueKind.Array)
                                     {
-                                        if (item.TryGetProperty("Id", out var idProp) && idProp.ValueKind == JsonValueKind.Number)
+                                        foreach (var item in parsedArray.EnumerateArray())
                                         {
-                                            if (idProp.GetInt32() == req.Id)
+                                            if (item.TryGetProperty("Id", out var idProp) && idProp.ValueKind == JsonValueKind.Number)
                                             {
-                                                aiDetail = item;
-                                                matchFound = true;
-                                                break;
+                                                if (idProp.GetInt32() == req.Id)
+                                                {
+                                                    aiDetail = item;
+                                                    matchFound = true;
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
+
+                                    int baseScore = 0;
+                                    string status = "Not Mentioned";
+                                    string evidence = "AI missed this requirement in the evaluation.";
+
+                                    if (matchFound)
+                                    {
+                                        if (aiDetail.TryGetProperty("Score", out var scoreProp) && scoreProp.ValueKind == JsonValueKind.Number)
+                                            baseScore = scoreProp.GetInt32();
+
+                                        if (aiDetail.TryGetProperty("Status", out var statusProp))
+                                            status = statusProp.GetString() ?? "Not Met";
+                                        else
+                                            status = "Not Met"; 
+
+                                        if (aiDetail.TryGetProperty("Evidence", out var evidenceProp))
+                                            evidence = evidenceProp.GetString() ?? "No evidence found.";
+                                    }
+
+                                    int weight = req.IsMandatory ? 2 : 1; 
+                                    int weightedScore = baseScore * weight;
+
+                                    var detail = new EvaluationDetail
+                                    {
+                                        Requirement = req.RequirementText,
+                                        IsMandatory = req.IsMandatory, 
+                                        Status = status,
+                                        Evidence = evidence,
+                                        Score = weightedScore 
+                                    };
+
+                                    evaluation.Details.Add(detail);
+                                    evaluation.TotalScore += detail.Score;
                                 }
-
-                                int baseScore = 0;
-                                string status = "Not Mentioned";
-                                string evidence = "AI missed this requirement in the evaluation.";
-
-                                if (matchFound)
-                                {
-                                    if (aiDetail.TryGetProperty("Score", out var scoreProp) && scoreProp.ValueKind == JsonValueKind.Number)
-                                        baseScore = scoreProp.GetInt32();
-
-                                    if (aiDetail.TryGetProperty("Status", out var statusProp))
-                                        status = statusProp.GetString() ?? "Not Met";
-                                    else
-                                        status = "Not Met"; 
-
-                                    if (aiDetail.TryGetProperty("Evidence", out var evidenceProp))
-                                        evidence = evidenceProp.GetString() ?? "No evidence found.";
-                                }
-
-                                int weight = req.IsMandatory ? 2 : 1; 
-                                int weightedScore = baseScore * weight;
-
-                                var detail = new EvaluationDetail
-                                {
-                                    Requirement = req.RequirementText,
-                                    IsMandatory = req.IsMandatory, 
-                                    Status = status,
-                                    Evidence = evidence,
-                                    Score = weightedScore 
-                                };
-
-                                evaluation.Details.Add(detail);
-                                evaluation.TotalScore += detail.Score;
+                            }
+                            else 
+                            {
+                                throw new Exception("Could not find valid JSON in AI response.");
                             }
                         }
-                        else 
+                        catch (Exception ex)
                         {
-                            throw new Exception("Could not find valid JSON in AI response.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Batched AI Error for vendor {VendorName}", vendor);
-                        foreach(var req in requirements)
-                        {
-                            evaluation.Details.Add(new EvaluationDetail
+                            _logger.LogError(ex, "Batched AI Error for vendor {VendorName} at batch {BatchIndex}", vendor, b);
+                            foreach(var req in reqBatch)
                             {
-                                Requirement = req.RequirementText,
-                                IsMandatory = req.IsMandatory,
-                                Status = "Error",
-                                Evidence = $"System Error: {ex.Message}", 
-                                Score = 0
-                            });
+                                evaluation.Details.Add(new EvaluationDetail
+                                {
+                                    Requirement = req.RequirementText,
+                                    IsMandatory = req.IsMandatory,
+                                    Status = "Error",
+                                    Evidence = $"System Error: {ex.Message}", 
+                                    Score = 0
+                                });
+                            }
                         }
                     }
 
@@ -258,8 +268,7 @@ namespace MediTender.API.Services
                     semaphore.Release();
                 }
             });
-                        
-            
+
             var allEvaluations = (await Task.WhenAll(evaluationTasks)).ToList();
             return allEvaluations;
         }
