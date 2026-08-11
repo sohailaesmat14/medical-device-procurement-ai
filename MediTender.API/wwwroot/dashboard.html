@@ -1059,21 +1059,17 @@
             };
             
             function applyTableFilters() {
-                const searchText = document
-                    .getElementById("searchInput")
-                    .value.toLowerCase();
+                const searchText = document.getElementById("searchInput").value.toLowerCase();
                 const statusVal = document.getElementById("statusFilter").value;
                 const vendorVal = document.getElementById("vendorFilter").value;
-                const mandatoryOnly =
-                    document.getElementById("mandatoryFilter").checked;
+                const mandatoryOnly = document.getElementById("mandatoryFilter").checked;
 
                 const tbody = document.querySelector(".matrix-container tbody");
                 const rows = tbody.querySelectorAll("tr");
 
                 rows.forEach((row) => {
                     const reqText = row.cells[0].innerText.toLowerCase();
-                    const isMandatory =
-                        row.cells[0].innerText.includes("Mandatory");
+                    const isMandatory = row.cells[0].innerText.includes("Mandatory");
 
                     let showRow = true;
 
@@ -1088,21 +1084,24 @@
                     let hasMatchingStatus = false;
 
                     for (let i = 1; i < row.cells.length; i++) {
-                        const cellText = row.cells[i].innerText;
-                        const currentVendor =
-                            globalEvaluations[i - 1].vendorName;
+                        const currentVendor = globalEvaluations[i - 1].vendorName;
 
-                        if (
-                            vendorVal !== "All" &&
-                            currentVendor !== vendorVal
-                        ) {
+                        if (vendorVal !== "All" && currentVendor !== vendorVal) {
                             continue;
                         }
 
-                        if (
-                            statusVal === "All" ||
-                            cellText.includes(statusVal)
-                        ) {
+                        const statusSpan = row.cells[i].querySelector('span[class^="status-"]');
+                        const exactStatus = statusSpan ? statusSpan.innerText.trim() : "";
+
+                        if (statusVal === "All") {
+                            hasMatchingStatus = true;
+                        } else if (statusVal === "Met" && exactStatus === "Met") {
+                            hasMatchingStatus = true;
+                        } else if (statusVal === "Partially Met" && exactStatus === "Partially Met") {
+                            hasMatchingStatus = true;
+                        } else if (statusVal === "Not Mentioned" && exactStatus === "Not Mentioned") {
+                            hasMatchingStatus = true;
+                        } else if (statusVal === "Not Met" && (exactStatus === "Not Met" || exactStatus === "Error")) {
                             hasMatchingStatus = true;
                         }
                     }
