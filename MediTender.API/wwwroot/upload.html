@@ -382,8 +382,16 @@
             }
 
             let vendorQueue = [];
-            const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit (Server-side constraint)
+            let isUploading = false;
+            const MAX_FILE_SIZE = 100 * 1024 * 1024; 
 
+            window.addEventListener("beforeunload", function (e) {
+                if (vendorQueue.length > 0 && !isUploading) {
+                    const confirmationMessage = "You have unsaved vendors in your queue. Are you sure you want to leave and lose your progress?";
+                    e.returnValue = confirmationMessage;
+                    return confirmationMessage;
+                }
+            });
             function showCustomModal(title, message, isConfirm, onConfirm) {
                 const modal = document.getElementById("customModal");
                 document.getElementById("modalTitle").innerText = title;
@@ -682,6 +690,8 @@
                     progressStep.innerText = "All files uploaded successfully! Redirecting to engine...";
                     progressBar.style.backgroundColor = "#10b981";
                     progressText.style.color = "#10b981";
+                    
+                    isUploading = true;
 
                     setTimeout(() => {
                         window.location.href = "processing.html";
