@@ -164,8 +164,8 @@
             <div class="input-group">
                 <label for="confirmPassword">Confirm Password</label>
                 <div class="password-container">
-                    <input type="password" id="password" placeholder="Min 8 chars (Upper, Lower, Number, Symbol)" required minlength="8" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters">
-                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                </div>
+                    <input type="password" id="confirmPassword" placeholder="Confirm your password" required minlength="6">
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>                </div>
             </div>
 
             <button type="submit" class="signup-btn">Sign Up & Continue</button>
@@ -178,44 +178,78 @@
 
     <script>
         async function performSignup() {
-            const fullname = document.getElementById('fullname').value;
-            const email = document.getElementById('email').value;
+            const name = document.getElementById('fullName').value;
+            const email = document.getElementById('workEmail').value;
             const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
             const errorMsg = document.getElementById('errorMsg');
+            
+            const signupBtn = document.querySelector('.login-btn'); 
 
-            if (password !== confirmPassword) {
-                errorMsg.innerText = "Passwords do not match. Please try again.";
+            if (password !== confirm) {
+                errorMsg.innerText = "Passwords do not match.";
                 errorMsg.style.display = "block";
                 return;
             }
+
+            signupBtn.disabled = true;
+            signupBtn.innerText = "Creating Account... ⏳";
+            signupBtn.style.opacity = "0.7"; 
             errorMsg.style.display = "none";
 
-           try {
+            try {
                 const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName: fullname, email: email, password: password })
+                    body: JSON.stringify({ fullName: name, email: email, password: password })
                 });
 
                 if (response.ok) {
-                    // Save email temporarily to use it in the verification page
-                    sessionStorage.setItem("temp_user_email", email);
-                    sessionStorage.setItem("user_name", fullname); 
+                    sessionStorage.setItem("verify_email", email);
                     
-                    alert("Account created! Please check your email for the verification code.");
-                    window.location.replace("verify-email.html");
+                    errorMsg.className = "error-msg"; 
+                    errorMsg.style.backgroundColor = "#d1fae5"; 
+                    errorMsg.style.color = "#059669"; 
+                    errorMsg.innerText = "Account created successfully! Redirecting to verification...";
+                    errorMsg.style.display = "block";
+
+                    setTimeout(() => {
+                        window.location.replace("verify-email.html");
+                    }, 2000);
+
                 } else {
                     const errorData = await response.json();
-                    errorMsg.innerText = errorData.message || "Failed to create account.";
+                    
+                    if (errorData.errors) {
+                        const firstErrorKey = Object.keys(errorData.errors)[0];
+                        errorMsg.innerText = errorData.errors[firstErrorKey][0];
+                    } else if (errorData.message) {
+                        errorMsg.innerText = errorData.message;
+                    } else {
+                        errorMsg.innerText = "Failed to create account. Please check your inputs.";
+                    }
+                    
+                    errorMsg.className = "error-msg";
+                    errorMsg.style.backgroundColor = "#fee2e2"; 
+                    errorMsg.style.color = "#dc2626";
                     errorMsg.style.display = "block";
+
+                    signupBtn.disabled = false;
+                    signupBtn.innerText = "Sign Up & Continue";
+                    signupBtn.style.opacity = "1";
                 }
             } catch (error) {
+                errorMsg.className = "error-msg";
+                errorMsg.style.backgroundColor = "#fee2e2";
+                errorMsg.style.color = "#dc2626";
                 errorMsg.innerText = "Server connection error.";
                 errorMsg.style.display = "block";
+                
+                signupBtn.disabled = false;
+                signupBtn.innerText = "Sign Up & Continue";
+                signupBtn.style.opacity = "1";
             }
         }
-
     </script>
 </body>
 </html>

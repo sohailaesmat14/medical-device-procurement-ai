@@ -84,7 +84,28 @@ namespace MediTender.API.Controllers
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
-            var emailBody = $"<h3>Welcome to MediProcure AI!</h3><p>Your verification code is: <strong>{verificationCode}</strong></p><p>This code expires in 24 hours.</p>";
+            // Professional HTML Email Template
+            var emailBody = $@"
+            <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+                <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
+                    <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
+                </div>
+                <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
+                    <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>Verify Your Account</h2>
+                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{user.FullName}</strong>,</p>
+                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Welcome to the future of intelligent tendering. Please use the verification code below to complete your registration:</p>
+                    
+                    <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
+                        <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{verificationCode}</span>
+                    </div>
+                    
+                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 24 hours.</p>
+                </div>
+                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
+                    <p style='margin: 0;'>&copy; {DateTime.Now.Year} MediTender Smart Assistant. All rights reserved.</p>
+                    <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
+                </div>
+            </div>";
             await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
 
             return Ok(new { Message = "User created successfully. Please check your email to verify your account." });

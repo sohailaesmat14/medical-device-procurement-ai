@@ -119,19 +119,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 });
 
-window.toggleDirection = function() {
-    const htmlDoc = document.documentElement;
-    const currentDir = htmlDoc.getAttribute("dir");
-
-    if (currentDir === "rtl") {
-        htmlDoc.setAttribute("dir", "ltr");
-        htmlDoc.setAttribute("lang", "en");
-    } else {
-        htmlDoc.setAttribute("dir", "rtl");
-        htmlDoc.setAttribute("lang", "ar");
-    }
-};
-
 window.togglePasswordVisibility = function(inputId, button) {
     const input = document.getElementById(inputId);
     if (input && input.type === "password") {
@@ -185,20 +172,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         }
 
-        const widgetContainer = document.createElement("div");
-        widgetContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; display: flex; align-items: center; gap: 10px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;`;
+        const existingWidget = document.getElementById("meditender-global-widget");
+        if (existingWidget) {
+            existingWidget.remove();
+        }
 
+        const widgetContainer = document.createElement("div");
+        widgetContainer.id = "meditender-global-widget";
+        widgetContainer.dir = "ltr";
+        widgetContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; display: flex; align-items: center; gap: 10px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;`;
+        
         const quotaBadge = document.createElement("div");
         quotaBadge.innerHTML = `🪙 <b>${remainingQuota}</b> Points`;
         quotaBadge.title = "Your current API quota balance";
         quotaBadge.style.cssText = `background-color: #3b82f6; color: white; padding: 10px 16px; border-radius: 50px; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;`;
-
-        // 2. Global AR/EN Translation Button
-        const langBtn = document.createElement("button");
-        langBtn.innerHTML = "🌐 AR / EN";
-        langBtn.ariaLabel = "Toggle Language Direction";
-        langBtn.style.cssText = `background-color: #f59e0b; color: white; border: none; padding: 10px 18px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease-in-out;`;
-        langBtn.onclick = window.toggleDirection;
 
         const logoutBtn = document.createElement("button");
         logoutBtn.innerHTML = "🚪 Logout";
@@ -207,7 +194,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         logoutBtn.onclick = performLogout; 
         
         widgetContainer.appendChild(quotaBadge);
-        widgetContainer.appendChild(langBtn);
         widgetContainer.appendChild(logoutBtn);
         document.body.appendChild(widgetContainer);
     }
