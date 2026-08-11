@@ -336,6 +336,7 @@
                         id="vendorTechFile"
                         accept="application/pdf"
                     />
+                    <span id="techFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
 
                     <label>Financial Offer PDF:</label>
                     <input
@@ -343,6 +344,8 @@
                         id="vendorFinFile"
                         accept="application/pdf"
                     />
+
+                    <span id="finFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
 
                     <button class="add-btn" onclick="addVendor()">
                         Add Vendor to Queue
@@ -421,75 +424,72 @@
                 updateVendorUI();
             }
 
-            function editVendor(index) {
-                const v = vendorQueue[index];
-                document.getElementById("vendorName").value = v.name;
+            let editingVendorId = null; 
 
-                vendorQueue.splice(index, 1);
-                updateVendorUI();
+            window.editVendor = function(id) {
+                const vendor = vendorQueue.find(v => v.id === id);
+                if (!vendor) return;
 
-                showCustomModal(
-                    "Edit Vendor",
-                    `Vendor '${v.name}' loaded.\n\nPlease re-select the Technical and Financial PDF files to update.`,
-                    false,
-                );
-            }
+                document.getElementById('vendorName').value = vendor.name;
+                
+                document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
+                document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
 
-            function addVendor() {
-                const vNameInput = document.getElementById("vendorName");
-                const vTechFileInput =
-                    document.getElementById("vendorTechFile");
-                const vFinFileInput = document.getElementById("vendorFinFile");
+                const addBtn = document.getElementById('addVendorBtn'); 
+                if(addBtn) addBtn.innerText = "Update Vendor";
+                
+                editingVendorId = id;
+            };
 
-                const vName = vNameInput.value.trim();
-                const vTechFile = vTechFileInput.files[0];
-                const vFinFile = vFinFileInput.files[0];
+            window.addVendor = function() {
+                const nameInput = document.getElementById('vendorName').value.trim();
+                const techInput = document.getElementById('techFile'); 
+                const finInput = document.getElementById('finFile');
 
-                if (!vName || !vTechFile || !vFinFile) {
-                    showCustomModal(
-                        "Missing Information",
-                        "Please provide the vendor name, technical offer, and financial offer.",
-                        false,
-                    );
+                if (!nameInput) {
+                    alert("Please enter a vendor name.");
                     return;
                 }
 
-                if (
-                    vendorQueue.some(
-                        (v) => v.name.toLowerCase() === vName.toLowerCase(),
-                    )
-                ) {
-                    showCustomModal(
-                        "Duplicate Vendor",
-                        `A vendor with the name '${vName}' is already in the queue!`,
-                        false,
-                    );
-                    return;
+                if (editingVendorId) {
+                    const vendorIndex = vendorQueue.findIndex(v => v.id === editingVendorId);
+                    if (vendorIndex !== -1) {
+                        vendorQueue[vendorIndex].name = nameInput;
+                        
+                        if (techInput.files.length > 0) {
+                            vendorQueue[vendorIndex].techFile = techInput.files[0];
+                        }
+                        if (finInput.files.length > 0) {
+                            vendorQueue[vendorIndex].finFile = finInput.files[0];
+                        }
+                    }
+
+                    editingVendorId = null;
+                    const addBtn = document.getElementById('addVendorBtn');
+                    if(addBtn) addBtn.innerText = "Add Vendor";
+                    document.getElementById('techFileDisplay').innerText = "";
+                    document.getElementById('finFileDisplay').innerText = "";
+                    
+                } else {
+                    if (techInput.files.length === 0 || finInput.files.length === 0) {
+                        alert("Please select both Technical and Financial files for the new vendor.");
+                        return;
+                    }
+
+                    vendorQueue.push({
+                        id: Date.now(),
+                        name: nameInput,
+                        techFile: techInput.files[0],
+                        finFile: finInput.files[0]
+                    });
                 }
 
-                if (
-                    vTechFile.size > MAX_FILE_SIZE ||
-                    vFinFile.size > MAX_FILE_SIZE
-                ) {
-                    showCustomModal(
-                        "File Too Large",
-                        "One of the files exceeds the 100MB limit. Please upload a smaller file.",
-                        false,
-                    );
-                    return;
-                }
-
-                vendorQueue.push({
-                    name: vName,
-                    techFile: vTechFile,
-                    finFile: vFinFile,
-                });
-                updateVendorUI();
-
-                vNameInput.value = "";
-                vTechFileInput.value = "";
-                vFinFileInput.value = "";
-            }
+                document.getElementById('vendorName').value = "";
+                techInput.value = "";
+                finInput.value = "";
+                
+                renderVendorQueue();
+            };
 
             function updateVendorUI() {
                 const listDiv = document.getElementById("vendorList");
