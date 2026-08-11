@@ -38,6 +38,7 @@ builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IComparisonService, ComparisonService>();
 builder.Services.AddScoped<IStandardExtractionService, StandardExtractionService>();
 builder.Services.AddHttpClient<IPaymobService, PaymobService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
 {

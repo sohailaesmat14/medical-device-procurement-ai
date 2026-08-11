@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediProcure AI - Verify Email</title>
+    <script src="config.js"></script>
+    <style>
+        /* Shared Styles (same as login.html for consistency) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .auth-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); width: 100%; max-width: 400px; text-align: center; margin: 20px; }
+        .logo { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; text-decoration: none; display: inline-block; }
+        .logo span { color: #10b981; }
+        .avatar-placeholder { width: 80px; height: 80px; background-color: #e2e8f0; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; font-size: 32px; border: 2px dashed #cbd5e1; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #475569; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: 0.3s; text-align: center; font-size: 18px; letter-spacing: 5px; font-weight: bold; }
+        input[type="text"]:focus { outline: none; border-color: #2563eb; }
+        .auth-btn { background-color: #2563eb; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .auth-btn:hover { background-color: #1d4ed8; }
+        .error-msg { color: #dc2626; font-size: 14px; margin-bottom: 15px; display: none; font-weight: bold; background: #fee2e2; padding: 10px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <a href="home.html" class="logo">MediProcure <span>AI</span></a>
+        <div class="avatar-placeholder">✉️</div>
+        
+        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Verify Your Email</h2>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">We've sent a 6-digit code to your email. Please enter it below.</p>
+        
+        <div id="errorMsg" class="error-msg"></div>
+
+        <form onsubmit="event.preventDefault(); verifyEmail();">
+            <div class="input-group">
+                <label for="verificationCode">Verification Code</label>
+                <input type="text" id="verificationCode" placeholder="000000" maxlength="6" required>
+            </div>
+            <button type="submit" class="auth-btn" id="verifyBtn">Verify & Continue</button>
+        </form>
+    </div>
+
+    <script>
+        async function verifyEmail() {
+            const code = document.getElementById('verificationCode').value.trim();
+            const email = sessionStorage.getItem("temp_user_email");
+            const errorMsg = document.getElementById('errorMsg');
+            const btn = document.getElementById('verifyBtn');
+
+            if (!email) {
+                alert("Session expired. Please sign up again.");
+                window.location.replace("signup.html");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Verifying...";
+
+            try {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/verify-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, code: code })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    sessionStorage.setItem("jwt_token", data.token);
+                    sessionStorage.setItem("user_email", email); 
+                    sessionStorage.removeItem("temp_user_email"); 
+                    window.location.replace("subscription.html");
+                } else {
+                    const errorData = await response.json();
+                    errorMsg.innerText = errorData.message || "Invalid code.";
+                    errorMsg.style.display = "block";
+                    btn.disabled = false;
+                    btn.innerText = "Verify & Continue";
+                }
+            } catch (error) {
+                errorMsg.innerText = "Server connection error.";
+                errorMsg.style.display = "block";
+                btn.disabled = false;
+                btn.innerText = "Verify & Continue";
+            }
+        }
+    </script>
+</body>
+</html>

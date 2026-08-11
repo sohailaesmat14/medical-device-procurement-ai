@@ -193,7 +193,7 @@
             }
             errorMsg.style.display = "none";
 
-            try {
+           try {
                 const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -201,11 +201,12 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    sessionStorage.setItem("jwt_token", data.token);
-                    sessionStorage.setItem("user_name", fullname);
-                    sessionStorage.setItem("user_email", email); // Save email for plan update
-                    window.location.replace("subscription.html");
+                    // Save email temporarily to use it in the verification page
+                    sessionStorage.setItem("temp_user_email", email);
+                    sessionStorage.setItem("user_name", fullname); 
+                    
+                    alert("Account created! Please check your email for the verification code.");
+                    window.location.replace("verify-email.html");
                 } else {
                     const errorData = await response.json();
                     errorMsg.innerText = errorData.message || "Failed to create account.";

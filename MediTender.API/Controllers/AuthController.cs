@@ -6,11 +6,11 @@ using System.Text;
 using MediTender.API.Data;
 using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.RateLimiting;
+using MediTender.API.Services;
 
 namespace MediTender.API.Controllers
 {
@@ -20,11 +20,13 @@ namespace MediTender.API.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IEmailService _emailService;
 
-        public AuthController(IConfiguration configuration, ApplicationDbContext dbContext)
+        public AuthController(IConfiguration configuration, ApplicationDbContext dbContext, IEmailService emailService)
         {
             _configuration = configuration;
             _dbContext = dbContext;
+            _emailService = emailService;
         }
 
         [HttpPost("signup")]
@@ -35,13 +37,17 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "Email already exists." });
             }
 
+            var verificationCode = new Random().Next(100000, 999999).ToString();
+
             var user = new ApplicationUser
             {
                 FullName = request.FullName,
                 Email = request.Email,
                 Plan = "free",
                 QuotaPoints = 200,
-                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7) 
+                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsEmailVerified = false,
+                VerificationToken = verificationCode
             };
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
@@ -50,8 +56,25 @@ namespace MediTender.API.Controllers
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
+            var emailBody = $"<h3>Welcome to MediProcure AI!</h3><p>Your verification code is: <strong>{verificationCode}</strong></p>";
+            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
+
+            return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+        }
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || user.VerificationToken != request.Code)
+                return BadRequest(new { Message = "Invalid verification code." });
+
+            user.IsEmailVerified = true;
+            user.VerificationToken = string.Empty; // Clear token after success
+            await _dbContext.SaveChangesAsync();
+
             var token = GenerateJwtToken(user);
-            return Ok(new { Token = token, Message = "User created successfully" });
+            return Ok(new { Token = token, Message = "Email verified successfully!" });
         }
 
         [HttpPost("login")]
@@ -71,6 +94,9 @@ namespace MediTender.API.Controllers
 
             if (user != null)
             {
+                if (!user.IsEmailVerified)
+                    return Unauthorized(new { Message = "Please verify your email before logging in." });
+
                 var passwordHasher = new PasswordHasher<ApplicationUser>();
                 var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
 
@@ -82,7 +108,7 @@ namespace MediTender.API.Controllers
             }
 
             return Unauthorized(new { Message = "Invalid email or password" });
-        }        
+        }       
         
         [HttpPost("update-plan")]
         [Authorize]
@@ -151,8 +177,62 @@ namespace MediTender.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null) 
+                return Ok(new { Message = "If the email exists, a reset code will be sent." }); // Security best practice
+
+            var resetCode = new Random().Next(100000, 999999).ToString();
+            user.ResetPasswordToken = resetCode;
+            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            
+            await _dbContext.SaveChangesAsync();
+
+            var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
+            await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
+
+            return Ok(new { Message = "If the email exists, a reset code will be sent." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || user.ResetPasswordToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+                return BadRequest(new { Message = "Invalid or expired reset code." });
+
+            var passwordHasher = new PasswordHasher<ApplicationUser>();
+            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
+            
+            user.ResetPasswordToken = string.Empty;
+            user.TokenExpiration = null;
+            
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { Message = "Password has been reset successfully. You can now login." });
+        }
     }
 
+    public class VerifyEmailRequest
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string Code { get; set; } = string.Empty;
+    }
+
+    public class ForgotPasswordRequest
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required] public string Code { get; set; } = string.Empty;
+        [Required, MinLength(6)] public string NewPassword { get; set; } = string.Empty;
+    }
     public class LoginRequest
     {
         [Required]
