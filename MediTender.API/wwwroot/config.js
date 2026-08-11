@@ -27,18 +27,74 @@ function performLogout() {
     window.location.replace("home.html");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     const token = sessionStorage.getItem("jwt_token");
     const currentPage = window.location.pathname.toLowerCase();
     
-    if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html")) {
-        const logoutBtn = document.createElement("button");
-        logoutBtn.innerHTML = "🚪 Logout";
+    if (currentPage.includes("home.html") || currentPage === "/" || currentPage.endsWith("wwwroot/")) {
+        if (token) {
+            const actionButtons = document.querySelectorAll('a[href*="login.html"], a[href*="signup.html"]');
+            actionButtons.forEach(btn => {
+                btn.href = "upload.html"; 
+                btn.innerHTML = "Go to Dashboard";
+                btn.style.backgroundColor = "#10b981"; 
+                btn.style.color = "white";
+                btn.style.borderColor = "#10b981";
+            });
+        }
+    }
+
+    if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !currentPage.includes("home.html")) {
         
-        logoutBtn.style.cssText = `
+        let remainingQuota = "...";
+        try {
+            const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ vendorCount: 0 })
+            });
+            
+            if (quotaRes.ok) {
+                const quotaData = await quotaRes.json();
+                remainingQuota = quotaData.remainingQuota;
+            }
+        } catch (e) {
+            console.error("Failed to fetch quota");
+        }
+
+        const widgetContainer = document.createElement("div");
+        widgetContainer.style.cssText = `
             position: fixed; 
             bottom: 20px; 
             right: 20px; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999; 
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        const quotaBadge = document.createElement("div");
+        quotaBadge.innerHTML = `🪙 <b>${remainingQuota}</b> Points`;
+        quotaBadge.title = "Your current API quota balance";
+        quotaBadge.style.cssText = `
+            background-color: #3b82f6; 
+            color: white; 
+            padding: 10px 16px; 
+            border-radius: 50px; 
+            font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+
+        const logoutBtn = document.createElement("button");
+        logoutBtn.innerHTML = "🚪 Logout";
+        logoutBtn.style.cssText = `
             background-color: #ef4444; 
             color: white; 
             border: none; 
@@ -46,21 +102,19 @@ document.addEventListener("DOMContentLoaded", () => {
             border-radius: 50px; 
             cursor: pointer; 
             font-weight: bold; 
+            font-size: 14px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            z-index: 9999; 
             transition: all 0.2s ease-in-out;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         `;
         
         logoutBtn.onmouseover = () => logoutBtn.style.backgroundColor = "#dc2626";
         logoutBtn.onmouseout = () => logoutBtn.style.backgroundColor = "#ef4444";
         logoutBtn.onmousedown = () => logoutBtn.style.transform = "scale(0.95)";
         logoutBtn.onmouseup = () => logoutBtn.style.transform = "scale(1)";
-        
         logoutBtn.onclick = performLogout; 
         
-        document.body.appendChild(logoutBtn);
+        widgetContainer.appendChild(quotaBadge);
+        widgetContainer.appendChild(logoutBtn);
+        document.body.appendChild(widgetContainer);
     }
 });
