@@ -65,42 +65,57 @@ namespace MediTender.API.Controllers
             
             if (success)
             {
-                var isProcessed = await _dbContext.PaymentTransactions.AnyAsync(pt => pt.OrderId == orderId);
-                if (isProcessed)
+                using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                try
                 {
-                    return Ok();
+                    var isProcessed = await _dbContext.PaymentTransactions.AnyAsync(pt => pt.OrderId == orderId);
+                    if (isProcessed)
+                    {
+                        return Ok();
+                    }
+
+                    var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
+                    var amountCents = obj.GetProperty("amount_cents").GetInt32();
+
+                    var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+                    if (user != null)
+                    {
+                        if (amountCents == 250000)
+                        {
+                            user.Plan = "monthly";
+                            user.QuotaPoints += 2000;
+                            user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
+                                ? user.SubscriptionExpiresAt.AddDays(30) 
+                                : DateTime.UtcNow.AddDays(30);
+                        }
+                        else if (amountCents == 2200000) 
+                        {
+                            user.Plan = "annually";
+                            user.QuotaPoints += 99999;
+                            user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
+                                ? user.SubscriptionExpiresAt.AddDays(365) 
+                                : DateTime.UtcNow.AddDays(365);
+                        }
+                        
+                        _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
+                        await _dbContext.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                    }
                 }
-
-                var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
-                var amountCents = obj.GetProperty("amount_cents").GetInt32();
-
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-                if (user != null)
+                catch (DbUpdateException)
                 {
-                    if (amountCents == 250000)
-                    {
-                        user.Plan = "monthly";
-                        user.QuotaPoints += 2000;
-                        user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
-                            ? user.SubscriptionExpiresAt.AddDays(30) 
-                            : DateTime.UtcNow.AddDays(30);
-                    }
-                    else if (amountCents == 2200000) 
-                    {
-                        user.Plan = "annually";
-                        user.QuotaPoints += 99999;
-                        user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
-                            ? user.SubscriptionExpiresAt.AddDays(365) 
-                            : DateTime.UtcNow.AddDays(365);
-                    }
-                    
-                    _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
-                    await _dbContext.SaveChangesAsync();
+                    await transaction.RollbackAsync();
+                    return Ok(); 
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
                 }
             }
 
             return Ok(); 
-        }        
+        }
     }
 
     public class PaymentRequest
