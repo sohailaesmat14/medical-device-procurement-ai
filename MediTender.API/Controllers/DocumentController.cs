@@ -61,7 +61,7 @@ namespace MediTender.API.Controllers
         [HttpPost("upload-pdf")]
         public async Task<IActionResult> UploadPdfAsync([FromForm] FileUploadRequest request)
         {
-            request.VendorName = request.VendorName?.Trim().ToLowerInvariant() ?? string.Empty;
+            request.VendorName = request.VendorName?.Trim() ?? string.Empty;
             
             if (request.File == null || request.File.Length == 0)
                 return BadRequest("Invalid file.");
@@ -179,7 +179,7 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "Free plan allows a maximum of 2 vendors per evaluation. Please upgrade your plan." });
             }
 
-            request.VendorNames = request.VendorNames.Select(v => v.Trim().ToLowerInvariant()).ToList();
+            request.VendorNames = request.VendorNames.Select(v => v.Trim()).ToList();
             int cost = request.VendorNames.Count * 15;
             
             var quotaResult = await TryConsumeQuotaAsync(cost);
@@ -230,8 +230,11 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
-            int cost = 10;
-            var quotaResult = await TryConsumeQuotaAsync(cost);
+            int extractionCost = 10;
+            int comparisonCost = request.VendorCount * 15;
+            int totalCost = extractionCost + comparisonCost;
+
+            var quotaResult = await TryConsumeQuotaAsync(totalCost);
             if (!quotaResult.Success)
             {
                 return BadRequest(new { Message = quotaResult.Error });
@@ -240,21 +243,24 @@ namespace MediTender.API.Controllers
             try
             {
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId, cancellationToken);
+                
+                await RefundQuotaAsync(comparisonCost);
+                
                 return Ok(requirements);
             }
             catch (OperationCanceledException)
             {
-                await RefundQuotaAsync(cost);
+                await RefundQuotaAsync(totalCost);
                 return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
-                await RefundQuotaAsync(cost);
+                await RefundQuotaAsync(totalCost);
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
-        }        
-        
+        }
+
         [Authorize(Roles = "Committee")]
         [HttpDelete("reset-system")]
         public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)
@@ -591,7 +597,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while updating the financial price." });
             }
         }
-        
+
         [HttpGet("my-tenders")]
         public async Task<IActionResult> GetMyTenders()
         {
@@ -627,6 +633,7 @@ namespace MediTender.API.Controllers
         {
             public string FileName { get; set; } = string.Empty;
             public int TenderId { get; set; }
+            public int VendorCount { get; set; }
         }
 
     }

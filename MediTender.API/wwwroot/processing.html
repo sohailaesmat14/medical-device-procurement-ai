@@ -286,7 +286,8 @@
                                 },
                                 body: JSON.stringify({
                                     fileName: standardFile,
-                                    tenderId: parseInt(currentTenderId)
+                                    tenderId: parseInt(currentTenderId),
+                                    vendorCount: vendors.length 
                                 }),
                                 timeout: 300000 
                             });
