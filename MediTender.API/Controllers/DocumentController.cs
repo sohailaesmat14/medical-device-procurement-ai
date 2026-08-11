@@ -89,8 +89,6 @@ namespace MediTender.API.Controllers
 
             try
             {
-                await _vectorStorageService.DeleteExistingDocumentAsync(request.TenderId, request.DocumentType, request.VendorName);
-
                 var extractedText = await Task.Run(() => _pdfParsingService.ExtractTextFromPdf(stream));
 
                 if (string.IsNullOrWhiteSpace(extractedText) || extractedText.Trim().Length < 50)
@@ -104,6 +102,8 @@ namespace MediTender.API.Controllers
                 {
                     return BadRequest("Error: The document text could not be processed into chunks. Please check the file format.");
                 }
+                
+                await _vectorStorageService.DeleteExistingDocumentAsync(request.TenderId, request.DocumentType, request.VendorName);
                 
                 await _vectorStorageService.SaveChunksToQdrantAsync(request.File.FileName, request.DocumentType, request.VendorName, chunks, request.TenderId);
 
@@ -120,7 +120,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
             }
         }
-
+        
         [HttpPost("ask")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
         {
