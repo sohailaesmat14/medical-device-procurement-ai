@@ -195,17 +195,15 @@
                 <div class="progress-fill" id="progressFill">0%</div>
             </div>
 
-            <button
-                class="retry-btn"
-                id="retryBtn"
-                onclick="window.location.replace('upload.html')"
-            >
-                🔄 Go Back & Retry
-            </button>
+            <div id="errorContainer" style="display: none; margin-top: 20px; padding: 15px; border-left: 4px solid #ef4444; background-color: #fee2e2;">
+                <p id="errorMessage" style="color: #b91c1c; font-weight: 500; margin-bottom: 15px;"></p>
+                <button id="retryBtn" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;">
+                    Resume Processing 🔄
+                </button>
+            </div>
         </div>
 
         <script>
-
             if (!sessionStorage.getItem("jwt_token")) {
                 window.location.replace("login.html");
             }
@@ -216,8 +214,7 @@
             }
 
             const unloadWarning = function (e) {
-                const msg =
-                    "Are you sure you want to leave? Your progress will be lost.";
+                const msg = "Are you sure you want to leave? Your progress will be lost.";
                 e.returnValue = msg;
                 return msg;
             };
@@ -236,118 +233,129 @@
                 }
             }
 
-            document.addEventListener("DOMContentLoaded", async () => {
-                const standardFile = sessionStorage.getItem(
-                    "meditender_standard_file",
-                );
-                const vendorsRaw = sessionStorage.getItem("meditender_vendors");
-                const currentTenderId = sessionStorage.getItem("meditender_current_id");
+            let currentStep = "extract"; 
 
-                const statusText = document.getElementById("processStatus");
-                const progressWrapper =
-                    document.getElementById("progressWrapper");
-                const progressFill = document.getElementById("progressFill");
-                const retryBtn = document.getElementById("retryBtn");
-                const spinnerWrapper =
-                    document.getElementById("spinnerWrapper");
-                const mainTitle = document.getElementById("mainTitle");
+            document.addEventListener("DOMContentLoaded", () => {
+                
+                async function startProcessing() {
+                    const standardFile = sessionStorage.getItem("meditender_standard_file");
+                    const vendorsRaw = sessionStorage.getItem("meditender_vendors");
+                    const currentTenderId = sessionStorage.getItem("meditender_current_id");
 
-                function showErrorState(message) {
-                    window.removeEventListener("beforeunload", unloadWarning);
-                    statusText.innerText = message;
-                    statusText.style.color = "#dc2626";
-                    mainTitle.innerText = "Analysis Failed";
-                    spinnerWrapper.style.display = "none";
-                    progressWrapper.style.display = "none";
-                    retryBtn.style.display = "inline-block";
-                }
-
-                if (!standardFile || !vendorsRaw || !currentTenderId) {
-                    showErrorState("Error: Missing data or Tender ID from upload step.");
-                    return;
-                }
-
-                const vendors = JSON.parse(vendorsRaw);
-                progressWrapper.style.display = "block";
-
-                try {
-                    updateProgress(10, "Phase 1: Auto-extracting mandatory specifications from Tender Standard...");
-
-                    let extractRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
-                        method: 'POST', 
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            'Authorization': `Bearer ${token}` 
-                        },
-                        body: JSON.stringify({
-                            fileName: standardFile,
-                            tenderId: parseInt(currentTenderId)
-                        }),
-                        timeout: 300000 
-                    });
-                    
-                    if (!extractRes.ok)
-                        throw new Error(
-                            `API Error: ${await extractRes.text()}`,
-                        );
-
-                    let extractData = await extractRes.json();
-                    let requirements = extractData.requirements || extractData; 
-
-                    if (!requirements || requirements.length === 0) {
-                        throw new Error(
-                            "AI could not find any requirements in the document.",
-                        );
-                    }
-
-                    updateProgress(45, "Phase 1 Complete! Standard requirements extracted successfully.");
-                    await new Promise(r => setTimeout(r, 1000));
-                    updateProgress(55, "Phase 2: AI Agents evaluating Vendor Offers in parallel. This may take a moment...");
-                    
-
-                    let compareRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({
-                            tenderId: parseInt(currentTenderId),
-                            vendorNames: vendors
-                        }),
-                        timeout: 420000
-                    });
-
-                    if (!compareRes.ok)
-                        throw new Error(
-                            `Comparison API Error: ${await compareRes.text()}`,
-                        );
-
-                    let evaluations = await compareRes.json();
-
-                    updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
-                    sessionStorage.setItem(
-                        "meditender_evaluations",
-                        JSON.stringify(evaluations),
-                    );
-                    window.onbeforeunload = null;
-
-                    setTimeout(() => {
-                        window.location.replace("dashboard.html");
-                    }, 1000);
-                } catch (err) {
-                    let errorMessage = err.message;
-                    
-                    if (err.name === 'AbortError') {
-                        errorMessage = "The request timed out. The server or AI is taking too long to respond. Please try again.";
-                    }
-
+                    const statusText = document.getElementById("processStatus");
+                    const progressWrapper = document.getElementById("progressWrapper");
                     const progressFill = document.getElementById("progressFill");
-                    if (progressFill) progressFill.style.backgroundColor = "#dc3545"; 
+                    const retryBtn = document.getElementById("retryBtn");
+                    const spinnerWrapper = document.getElementById("spinnerWrapper");
+                    const mainTitle = document.getElementById("mainTitle");
+
+                    function showErrorState(message) {
+                        window.removeEventListener("beforeunload", unloadWarning);
+                        statusText.innerText = message;
+                        statusText.style.color = "#dc2626";
+                        mainTitle.innerText = "Analysis Failed";
+                        spinnerWrapper.style.display = "none";
+                        progressWrapper.style.display = "none";
+                        retryBtn.style.display = "inline-block";
+                        retryBtn.innerText = "Resume Processing 🔄"; 
+                    }
+
+                    if (!standardFile || !vendorsRaw || !currentTenderId) {
+                        showErrorState("Error: Missing data or Tender ID from upload step.");
+                        return;
+                    }
+
+                    const vendors = JSON.parse(vendorsRaw);
                     
-                    updateProgress(100, "System Error: " + errorMessage); 
-                    showErrorState("System Error: " + errorMessage);
+                    progressWrapper.style.display = "block";
+                    spinnerWrapper.style.display = "block";
+                    retryBtn.style.display = "none";
+                    statusText.style.color = "";
+                    if (progressFill) progressFill.style.backgroundColor = "#2563eb"; 
+                    mainTitle.innerText = "Processing Document...";
+
+                    try {
+                        if (currentStep === "extract") {
+                            updateProgress(10, "Phase 1: Auto-extracting mandatory specifications from Tender Standard...");
+
+                            let extractRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/extract-standard`, {
+                                method: 'POST', 
+                                headers: { 
+                                    'Content-Type': 'application/json', 
+                                    'Authorization': `Bearer ${token}` 
+                                },
+                                body: JSON.stringify({
+                                    fileName: standardFile,
+                                    tenderId: parseInt(currentTenderId)
+                                }),
+                                timeout: 300000 
+                            });
+                            
+                            if (!extractRes.ok)
+                                throw new Error(`API Error: ${await extractRes.text()}`);
+
+                            let extractData = await extractRes.json();
+                            let requirements = extractData.requirements || extractData; 
+
+                            if (!requirements || requirements.length === 0) {
+                                throw new Error("AI could not find any requirements in the document.");
+                            }
+
+                            updateProgress(45, "Phase 1 Complete! Standard requirements extracted successfully.");
+                            await new Promise(r => setTimeout(r, 1000));
+                            
+                            currentStep = "compare"; 
+                        }
+
+                        if (currentStep === "compare") {
+                            updateProgress(55, "Phase 2: AI Agents evaluating Vendor Offers in parallel. This may take a moment...");
+
+                            let compareRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/compare-vendors`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    tenderId: parseInt(currentTenderId),
+                                    vendorNames: vendors
+                                }),
+                                timeout: 420000
+                            });
+
+                            if (!compareRes.ok)
+                                throw new Error(`Comparison API Error: ${await compareRes.text()}`);
+
+                            let evaluations = await compareRes.json();
+
+                            updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
+                            sessionStorage.setItem("meditender_evaluations", JSON.stringify(evaluations));
+                            window.onbeforeunload = null;
+
+                            setTimeout(() => {
+                                window.location.replace("dashboard.html");
+                            }, 1000);
+                        }
+
+                    } catch (err) {
+                        let errorMessage = err.message;
+                        
+                        if (err.name === 'AbortError') {
+                            errorMessage = "The request timed out. The server or AI is taking too long to respond. Please try again.";
+                        }
+
+                        if (progressFill) progressFill.style.backgroundColor = "#dc3545"; 
+                        updateProgress(100, "System Error: " + errorMessage); 
+                        showErrorState("System Error: " + errorMessage);
+
+                        retryBtn.onclick = () => {
+                            window.addEventListener("beforeunload", unloadWarning);
+                            startProcessing();
+                        };
+                    }
                 }
+
+                startProcessing();
             });
         </script>
     </body>
