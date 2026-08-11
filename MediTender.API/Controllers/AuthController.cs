@@ -34,14 +34,6 @@ namespace MediTender.API.Controllers
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var adminUser = _configuration["AdminConfig:Username"];
-            var adminPass = _configuration["AdminConfig:Password"];
-
-            if (!string.IsNullOrEmpty(adminUser) && request.Username == adminUser && request.Password == adminPass)
-            {
-                var adminToken = GenerateAdminJwtToken(adminUser, "Committee");
-                return Ok(new { Token = adminToken, Message = "Login Successful", Plan = "annually", FullName = "Committee Admin" });
-            }
 
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
 
@@ -88,7 +80,7 @@ namespace MediTender.API.Controllers
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-
+            user.Role = request.Email.EndsWith("@meditender.gov.eg") ? "Committee" : "Vendor";
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
@@ -161,35 +153,13 @@ namespace MediTender.API.Controllers
         [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
         {
-            // 1. Security Check: Block any attempt to manually set a paid plan
-            if (string.IsNullOrWhiteSpace(request.Plan) || request.Plan.ToLowerInvariant() != "free")
+            if (!string.IsNullOrWhiteSpace(request.Plan) && request.Plan.ToLowerInvariant() == "free")
             {
-                return BadRequest(new { Message = "Unauthorized action. Paid plans can only be activated through the secure payment gateway." });
+                return Ok(new { Message = "You are currently on the free trial plan." });
             }
 
-            var userEmailStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
-                                ?? User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            
-            if (string.IsNullOrEmpty(userEmailStr))
-            {
-                return Unauthorized(new { Message = "User email not found in token." });
-            }
-
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmailStr);
-            
-            if (user == null)
-            {
-                return NotFound(new { Message = "User not found." });
-            }
-
-            // 2. Hardcode the values server-side (Ignore request.QuotaPoints completely)
-            user.Plan = "free";
-            user.QuotaPoints = 200; 
-            
-            await _dbContext.SaveChangesAsync();
-
-            return Ok(new { Message = "Free plan activated successfully" });
-        }
+            return BadRequest(new { Message = "Unauthorized action. Paid plans can only be activated through the secure payment gateway." });
+        }        
         private string GenerateJwtToken(ApplicationUser user)
         {
             var claims = new[]
@@ -198,6 +168,7 @@ namespace MediTender.API.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim("FullName", user.FullName),
                 new Claim("Plan", user.Plan),
+                new Claim(ClaimTypes.Role, user.Role), 
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
             
@@ -230,26 +201,78 @@ namespace MediTender.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        [HttpPost("resend-verification")]
+        [EnableRateLimiting("LoginPolicy")] // Protect against email spamming
+        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            
+            // Security best practice: Don't reveal if the email exists or not to prevent email enumeration
+            if (user == null || user.IsEmailVerified)
+                return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
+
+            // Generate a new secure code
+            var newCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            
+            user.VerificationToken = newCode;
+            user.TokenExpiration = DateTime.UtcNow.AddHours(24);
+
+            await _dbContext.SaveChangesAsync();
+
+            try
+            {
+                var emailBody = $"<h3>MediProcure AI</h3><p>Your new verification code is: <strong>{newCode}</strong></p><p>This code expires in 24 hours.</p>";
+                await _emailService.SendEmailAsync(user.Email, "New Verification Code", emailBody);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An error occurred while sending the email. Please try again later." });
+            }
+
+            return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
+        }
        
     }
 
+    public class ResendVerificationRequest
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+    }
     public class VerifyEmailRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
         [Required] public string Code { get; set; } = string.Empty;
     }
-
-    public class ForgotPasswordRequest
+    public class SignUpRequest
     {
-        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required, MinLength(3)]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required, EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+            ErrorMessage = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
+        public string Password { get; set; } = string.Empty;
     }
 
     public class ResetPasswordRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
         [Required] public string Code { get; set; } = string.Empty;
-        [Required, MinLength(6)] public string NewPassword { get; set; } = string.Empty;
+        
+        [Required]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
+            ErrorMessage = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
+        public string NewPassword { get; set; } = string.Empty;
     }
+    public class ForgotPasswordRequest
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+    }
+
     public class LoginRequest
     {
         [Required]
@@ -260,22 +283,6 @@ namespace MediTender.API.Controllers
         [MinLength(6)]
         public string Password { get; set; } = string.Empty;
     }
-
-    public class SignUpRequest
-    {
-        [Required]
-        [MinLength(3)]
-        public string FullName { get; set; } = string.Empty;
-
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [Required]
-        [MinLength(6)]
-        public string Password { get; set; } = string.Empty;
-    }
-    
     public class UpdatePlanRequest
     {
         [Required]

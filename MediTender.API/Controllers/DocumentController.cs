@@ -151,17 +151,6 @@ namespace MediTender.API.Controllers
             public string VendorName { get; set; } = string.Empty;
         }
 
-        [HttpGet("history")]
-        public async Task<IActionResult> GetHistory()
-        {
-            var history = await _dbContext.TenderInteractions
-                .OrderByDescending(x => x.CreatedAt)
-                .Take(10)
-                .ToListAsync();
-            
-            return Ok(history);
-        }
-
         [HttpPost("compare-vendors")]
         public async Task<IActionResult> CompareVendors([FromBody] MultiComparisonRequest request, [FromServices] IComparisonService comparisonService, CancellationToken cancellationToken)
         {
@@ -213,7 +202,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred during vendor comparison. Please review the logs." });
             }
         }
-        
+
         public class MultiComparisonRequest 
         { 
             public int TenderId { get; set; } = 1; 
@@ -232,11 +221,10 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
+            // 1. Consume ONLY the cost of the extraction phase (10 points).
+            // The Comparison phase will naturally handle its own cost in the CompareVendors endpoint.
             int extractionCost = 10;
-            int comparisonCost = request.VendorCount * 15;
-            int totalCost = extractionCost + comparisonCost;
-
-            var quotaResult = await TryConsumeQuotaAsync(totalCost);
+            var quotaResult = await TryConsumeQuotaAsync(extractionCost);
             if (!quotaResult.Success)
             {
                 return BadRequest(new { Message = quotaResult.Error });
@@ -246,27 +234,36 @@ namespace MediTender.API.Controllers
             {
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId, cancellationToken);
                 
-                await RefundQuotaAsync(comparisonCost);
-                
+                // Return successfully without needing to refund anything
                 return Ok(requirements);
             }
             catch (OperationCanceledException)
             {
-                await RefundQuotaAsync(totalCost);
+                // Only refund the 10 points if the client disconnected or canceled
+                await RefundQuotaAsync(extractionCost);
                 return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
-                await RefundQuotaAsync(totalCost);
+                // Only refund the 10 points if a server error occurred
+                await RefundQuotaAsync(extractionCost);
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
         }
-
-        [Authorize(Roles = "Committee")]
+        
         [HttpDelete("reset-system")]
-        public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)
+        [Authorize(Roles = "Committee")]
+        public async Task<IActionResult> ResetSystem(
+            [FromServices] Qdrant.Client.QdrantClient qdrantClient,
+            [FromServices] IWebHostEnvironment env) // 1. Inject the Environment service
         {
+            // 2. Security Check: Strictly limit mass deletion to Development environments ONLY
+            if (!env.IsDevelopment())
+            {
+                return Forbid(); // Returns 403 Forbidden without exposing system details
+            }
+
             try
             {
                 _dbContext.VendorOffers.RemoveRange(_dbContext.VendorOffers);
@@ -312,7 +309,7 @@ namespace MediTender.API.Controllers
                 _logger.LogError(ex, "Error during system reset operation.");
                 return StatusCode(500, new { Message = "An internal server error occurred while resetting the system." });
             }
-        }
+        }        
         public class FileUploadRequest
         {
             public IFormFile? File { get; set; }
@@ -392,11 +389,17 @@ namespace MediTender.API.Controllers
         [HttpPost("check-quota")]
         public async Task<IActionResult> CheckQuota([FromBody] QuotaRequest request)
         {
+            if (request.VendorCount < 0)
+                return BadRequest(new { Success = false, Message = "Vendor count cannot be negative." });
+
+            if (User.IsInRole("Committee"))
+                return Ok(new { Success = true, RemainingQuota = 9999 });
+
             int cost = request.VendorCount * 15;
             int userId = GetCurrentUserId();
             
             if (userId == 0)
-                return Ok(new { Success = true, RemainingQuota = 9999 });
+                return Unauthorized();
 
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null) return Unauthorized();
@@ -415,19 +418,19 @@ namespace MediTender.API.Controllers
                 return Ok(new { Success = true, RemainingQuota = user.QuotaPoints });
                 
             return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
-        }        
+        }       
+         
         public class QuotaRequest
         {
             public int VendorCount { get; set; }
         }
 
         [HttpPost("override-evaluation")]
+        [Authorize(Roles = "Committee")]
         public async Task<IActionResult> OverrideEvaluation([FromBody] OverrideRequest request)
         {
-            int userId = GetCurrentUserId();
-            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
-            if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+            int committeeUserId = GetCurrentUserId();
+            var committeeEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
 
             try
             {
@@ -443,7 +446,7 @@ namespace MediTender.API.Controllers
                     return NotFound("Requirement not found in this evaluation.");
 
                 detail.Status = "Met";
-                detail.Evidence = "✅ Manually verified by committee.";
+                detail.Evidence = $"✅ Manually verified and approved by committee member (ID: {committeeUserId}).";
                 detail.Score = detail.IsMandatory ? 20 : 10;
 
                 evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
@@ -466,6 +469,9 @@ namespace MediTender.API.Controllers
                 }
 
                 await _dbContext.SaveChangesAsync();
+
+                _logger.LogWarning("AUDIT TRAIL: Committee member {Email} (ID: {Id}) manually overrode requirement '{Requirement}' for vendor '{Vendor}' in Tender '{TenderId}'.", 
+                    committeeEmail, committeeUserId, request.Requirement, request.VendorName, request.TenderId);
 
                 return Ok(new { Message = "Override saved to database successfully" });
             }

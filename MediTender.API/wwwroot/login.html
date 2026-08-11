@@ -138,10 +138,10 @@
         
         <div class="avatar-placeholder">🔒</div>
         
-        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Committee Login</h2>
+        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Account Login</h2>
         <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Please authenticate to access the evaluation system.</p>
         
-        <div id="errorMsg" class="error-msg">Invalid credentials. Try again.</div>
+        <div id="errorMsg" class="error-msg" aria-live="assertive"></div>
 
         <form id="loginForm" onsubmit="event.preventDefault(); performLogin();">
             <div class="input-group">
@@ -153,8 +153,7 @@
                 <label for="password">Password</label>
                 <div class="password-container">
                     <input type="password" id="password" placeholder="Enter your password" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)" title="Toggle Password Visibility">👁️</button>
-                </div>
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                </div>
             </div>
             <div style="text-align: right; margin-bottom: 20px;">
                 <a href="forgot-password.html" style="font-size: 13px; color: #2563eb; text-decoration: none; font-weight: bold;">Forgot Password?</a>
@@ -170,6 +169,7 @@
 
     <script>
         async function performLogin() {
+            
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
@@ -179,7 +179,8 @@
             loginBtn.innerText = "Signing in...";
 
             try {
-                const response = await fetch('http://localhost:5172/api/Auth/login', {
+                // Fixed: Using the global CONFIG.API_BASE_URL instead of a hardcoded localhost URL
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: user, password: pass })
@@ -189,6 +190,8 @@
                     const data = await response.json();
                     sessionStorage.setItem("jwt_token", data.token);
                     sessionStorage.setItem("user_name", data.fullName || user);
+                    
+                    sessionStorage.setItem("user_email", user); 
                     
                     if (data.plan) {
                         sessionStorage.setItem("meditender_plan", data.plan);
@@ -207,16 +210,6 @@
                 errorMsg.style.display = "block";
                 loginBtn.disabled = false;
                 loginBtn.innerText = "Sign In";
-            }
-        }    
-        function togglePasswordVisibility(inputId, button) {
-            const input = document.getElementById(inputId);
-            if (input.type === "password") {
-                input.type = "text";
-                button.innerText = "🙈"; 
-            } else {
-                input.type = "password";
-                button.innerText = "👁️"; 
             }
         }
     </script>

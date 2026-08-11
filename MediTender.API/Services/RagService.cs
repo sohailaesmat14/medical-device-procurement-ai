@@ -72,7 +72,9 @@ namespace MediTender.API.Services
             var interaction = new TenderInteraction
             {
                 Question = question,
-                Answer = answer
+                Answer = answer,
+                TenderId = tenderId,
+                VendorName = vendorName ?? string.Empty
             };
 
             _dbContext.TenderInteractions.Add(interaction);

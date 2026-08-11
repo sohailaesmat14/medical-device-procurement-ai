@@ -141,7 +141,7 @@
         <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Create an Account</h2>
         <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Join the future of intelligent tendering.</p>
         
-        <div id="errorMsg" class="error-msg"></div>
+        <div id="errorMsg" class="error-msg" aria-live="assertive"></div>
 
         <form id="signupForm" onsubmit="event.preventDefault(); performSignup();">
             <div class="input-group">
@@ -158,16 +158,14 @@
                 <label for="password">Password</label>
                 <div class="password-container">
                     <input type="password" id="password" placeholder="Create a strong password" required minlength="6">
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)">👁️</button>
-                </div>
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                </div>
             </div>
 
             <div class="input-group">
                 <label for="confirmPassword">Confirm Password</label>
                 <div class="password-container">
-                    <input type="password" id="confirmPassword" placeholder="Repeat your password" required minlength="6">
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>
-                </div>
+                    <input type="password" id="password" placeholder="Min 8 chars (Upper, Lower, Number, Symbol)" required minlength="8" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters">
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                </div>
             </div>
 
             <button type="submit" class="signup-btn">Sign Up & Continue</button>
@@ -217,16 +215,7 @@
                 errorMsg.style.display = "block";
             }
         }
-        function togglePasswordVisibility(inputId, button) {
-            const input = document.getElementById(inputId);
-            if (input.type === "password") {
-                input.type = "text";
-                button.innerText = "🙈"; 
-            } else {
-                input.type = "password";
-                button.innerText = "👁️"; 
-            }
-        }
+
     </script>
 </body>
 </html>

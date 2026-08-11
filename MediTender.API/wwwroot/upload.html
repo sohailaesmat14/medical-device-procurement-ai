@@ -449,10 +449,13 @@
                 editingVendorId = id;
             };
 
+            // 1. Fix addVendor Function
             window.addVendor = function() {
                 const nameInput = document.getElementById('vendorName').value.trim();
-                const techInput = document.getElementById('techFile'); 
-                const finInput = document.getElementById('finFile');
+                
+                // BUG 1 FIXED: Use the correct HTML IDs
+                const techInput = document.getElementById('vendorTechFile'); 
+                const finInput = document.getElementById('vendorFinFile');
 
                 if (!nameInput) {
                     alert("Please enter a vendor name.");
@@ -473,8 +476,11 @@
                     }
 
                     editingVendorId = null;
-                    const addBtn = document.getElementById('addVendorBtn');
-                    if(addBtn) addBtn.innerText = "Add Vendor";
+                    
+                    // Extra Fix: The button doesn't have an ID, so we select it by class
+                    const addBtn = document.querySelector('.add-btn'); 
+                    if(addBtn) addBtn.innerText = "Add Vendor to Queue";
+                    
                     document.getElementById('techFileDisplay').innerText = "";
                     document.getElementById('finFileDisplay').innerText = "";
                     
@@ -485,7 +491,7 @@
                     }
 
                     vendorQueue.push({
-                        id: Date.now(),
+                        id: Date.now(), // Unique ID generated here
                         name: nameInput,
                         techFile: techInput.files[0],
                         finFile: finInput.files[0]
@@ -496,9 +502,11 @@
                 techInput.value = "";
                 finInput.value = "";
                 
-                renderVendorQueue();
+                // BUG 2 FIXED: Call the correct UI update function
+                updateVendorUI(); 
             };
 
+            // 2. Fix updateVendorUI Function
             function updateVendorUI() {
                 const listDiv = document.getElementById("vendorList");
                 if (vendorQueue.length === 0) {
@@ -516,14 +524,15 @@
                         <span style="color: #64748b;">Fin:</span> ${v.finFile.name}
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="editVendor(${index})" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
+                        <!-- BUG 3 FIXED: Pass v.id instead of the array index so the edit function finds the right vendor -->
+                        <button onclick="editVendor(${v.id})" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
+                        
                         <button onclick="removeVendor(${index})" style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">🗑️ Delete</button>
                     </div>
                 </div>`,
                     )
                     .join("");
             }
-
             function processUploads() {
                 const standardFile =
                     document.getElementById("standardFile").files[0];
@@ -690,7 +699,7 @@
                     progressStep.innerText = "All files uploaded successfully! Redirecting to engine...";
                     progressBar.style.backgroundColor = "#10b981";
                     progressText.style.color = "#10b981";
-                    
+
                     isUploading = true;
 
                     setTimeout(() => {

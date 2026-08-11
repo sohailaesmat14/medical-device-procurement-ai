@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MediProcure AI - Payment Status</title>
+    <script src="config.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f8fafc; }
+        .status-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="status-box">
+        <h2 id="statusMessage" style="color: #1e293b;">Verifying payment... ⏳</h2>
+        <p style="color: #64748b;">Please wait while we confirm your transaction.</p>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const params = new URLSearchParams(window.location.search);
+            const success = params.get("success");
+            const statusMessage = document.getElementById("statusMessage");
+            
+            setTimeout(() => {
+                if (success === "true") {
+                    statusMessage.innerText = "Payment Successful! 🎉";
+                    statusMessage.style.color = "#10b981";
+                    
+                    // Optional: Update plan in session storage locally for immediate UI update
+                    sessionStorage.setItem("meditender_plan", "paid");
+                    
+                    setTimeout(() => window.location.replace("upload.html"), 2000);
+                } else {
+                    statusMessage.innerText = "Payment Failed or Cancelled ❌";
+                    statusMessage.style.color = "#ef4444";
+                    
+                    setTimeout(() => window.location.replace("subscription.html"), 2000);
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
