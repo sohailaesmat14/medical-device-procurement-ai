@@ -591,7 +591,26 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while updating the financial price." });
             }
         }
+        
+        [HttpGet("my-tenders")]
+        public async Task<IActionResult> GetMyTenders()
+        {
+            int userId = GetCurrentUserId();
+            if (userId == 0) return Unauthorized(new { Message = "Invalid user token." });
 
+            var tenders = await _dbContext.Tenders
+                .Where(t => t.UserId == userId)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new 
+                {
+                    t.Id,
+                    t.Title,
+                    t.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(tenders);
+        }
         public class FinancialOverrideRequest
         {
             public int TenderId { get; set; }
