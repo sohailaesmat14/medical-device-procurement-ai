@@ -3,7 +3,7 @@ using System.Text.Json;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using MediTender.API.Models;
-using MediTender.API.Data; 
+using MediTender.API.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace MediTender.API.Services
@@ -28,6 +28,7 @@ namespace MediTender.API.Services
 
             var filter = new Filter();
             filter.Must.Add(new Condition { Field = new FieldCondition { Key = "fileName", Match = new Match { Keyword = fileName } } });
+            filter.Must.Add(new Condition { Field = new FieldCondition { Key = "tenderId", Match = new Match { Keyword = tenderId.ToString() } } });
 
             var searchResults = await _qdrantClient.SearchAsync(
                 collectionName: _collectionName,
@@ -103,7 +104,7 @@ namespace MediTender.API.Services
             {
                 throw new Exception("AI returned invalid JSON format. Please check the inner exception for details.", ex);
             }
-        }    
+        }
     }
 
     public class StandardExtractionDto
@@ -113,5 +114,4 @@ namespace MediTender.API.Services
         public string RequirementText { get; set; } = string.Empty;
         public bool IsMandatory { get; set; }
     }
-
 }
