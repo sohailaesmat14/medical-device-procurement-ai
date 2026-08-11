@@ -168,7 +168,7 @@ namespace MediTender.API.Controllers
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
 
-            int userId = GetCurrentUserId();
+            int userId = GetCurrentUserId(); // This is already here
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
@@ -197,7 +197,8 @@ namespace MediTender.API.Controllers
                 if (!dbRequirements.Any())
                     return BadRequest("No standard requirements found for this tender. Please run the extraction phase first.");
 
-                var results = await comparisonService.CompareVendorsAsync(request.TenderId, dbRequirements, request.VendorNames, cancellationToken);
+                // 3. Pass 'userId' as the second parameter
+                var results = await comparisonService.CompareVendorsAsync(request.TenderId, userId, dbRequirements, request.VendorNames, cancellationToken);
                 return Ok(results);
             }
             catch (OperationCanceledException)
@@ -212,6 +213,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred during vendor comparison. Please review the logs." });
             }
         }
+        
         public class MultiComparisonRequest 
         { 
             public int TenderId { get; set; } = 1; 

@@ -29,54 +29,7 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
-        [HttpPost("signup")]
-        public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
-        {
-            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
-            {
-                return BadRequest(new { Message = "Email already exists." });
-            }
-
-            var verificationCode = new Random().Next(100000, 999999).ToString();
-
-            var user = new ApplicationUser
-            {
-                FullName = request.FullName,
-                Email = request.Email,
-                Plan = "free",
-                QuotaPoints = 200,
-                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
-                IsEmailVerified = false,
-                VerificationToken = verificationCode
-            };
-
-            var passwordHasher = new PasswordHasher<ApplicationUser>();
-            user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
-
-            var emailBody = $"<h3>Welcome to MediProcure AI!</h3><p>Your verification code is: <strong>{verificationCode}</strong></p>";
-            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
-
-            return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
-        }
-
-        [HttpPost("verify-email")]
-        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null || user.VerificationToken != request.Code)
-                return BadRequest(new { Message = "Invalid verification code." });
-
-            user.IsEmailVerified = true;
-            user.VerificationToken = string.Empty; // Clear token after success
-            await _dbContext.SaveChangesAsync();
-
-            var token = GenerateJwtToken(user);
-            return Ok(new { Token = token, Message = "Email verified successfully!" });
-        }
-
+        
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -109,11 +62,111 @@ namespace MediTender.API.Controllers
 
             return Unauthorized(new { Message = "Invalid email or password" });
         }       
-        
+        [HttpPost("signup")]
+        public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
+        {
+            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
+            {
+                return BadRequest(new { Message = "Email already exists." });
+            }
+
+            // 1. Use Cryptographically Secure RNG
+            var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+            var user = new ApplicationUser
+            {
+                FullName = request.FullName,
+                Email = request.Email,
+                Plan = "free",
+                QuotaPoints = 200,
+                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
+                IsEmailVerified = false,
+                VerificationToken = verificationCode,
+                // 2. Add expiration time for the verification token (e.g., 24 hours)
+                TokenExpiration = DateTime.UtcNow.AddHours(24) 
+            };
+
+            var passwordHasher = new PasswordHasher<ApplicationUser>();
+            user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+
+            _dbContext.Users.Add(user);
+            await _dbContext.SaveChangesAsync();
+
+            var emailBody = $"<h3>Welcome to MediProcure AI!</h3><p>Your verification code is: <strong>{verificationCode}</strong></p><p>This code expires in 24 hours.</p>";
+            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
+
+            return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+        }
+
+        [HttpPost("verify-email")]
+        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            
+            // 2. Check for token expiration alongside code validity
+            if (user == null || user.VerificationToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+                return BadRequest(new { Message = "Invalid or expired verification code." });
+
+            user.IsEmailVerified = true;
+            user.VerificationToken = string.Empty; 
+            user.TokenExpiration = null; // Clear expiration after success
+            await _dbContext.SaveChangesAsync();
+
+            var token = GenerateJwtToken(user);
+            return Ok(new { Token = token, Message = "Email verified successfully!" });
+        }
+
+        [HttpPost("forgot-password")]
+        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null) 
+                return Ok(new { Message = "If the email exists, a reset code will be sent." }); 
+
+            // 1. Use Cryptographically Secure RNG
+            var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            
+            user.ResetPasswordToken = resetCode;
+            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            
+            await _dbContext.SaveChangesAsync();
+
+            var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
+            await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
+
+            return Ok(new { Message = "If the email exists, a reset code will be sent." });
+        }
+
+        [HttpPost("reset-password")]
+        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null || user.ResetPasswordToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+                return BadRequest(new { Message = "Invalid or expired reset code." });
+
+            var passwordHasher = new PasswordHasher<ApplicationUser>();
+            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
+            
+            user.ResetPasswordToken = string.Empty;
+            user.TokenExpiration = null;
+            
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { Message = "Password has been reset successfully. You can now login." });
+        }
         [HttpPost("update-plan")]
         [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
         {
+            // 1. Security Check: Block any attempt to manually set a paid plan
+            if (string.IsNullOrWhiteSpace(request.Plan) || request.Plan.ToLowerInvariant() != "free")
+            {
+                return BadRequest(new { Message = "Unauthorized action. Paid plans can only be activated through the secure payment gateway." });
+            }
+
             var userEmailStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
                                 ?? User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
             
@@ -129,14 +182,14 @@ namespace MediTender.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
-            user.Plan = request.Plan;
-            user.QuotaPoints = request.QuotaPoints;
+            // 2. Hardcode the values server-side (Ignore request.QuotaPoints completely)
+            user.Plan = "free";
+            user.QuotaPoints = 200; 
             
             await _dbContext.SaveChangesAsync();
 
-            return Ok(new { Message = "Plan updated successfully" });
-        }        
-
+            return Ok(new { Message = "Free plan activated successfully" });
+        }
         private string GenerateJwtToken(ApplicationUser user)
         {
             var claims = new[]
@@ -177,43 +230,7 @@ namespace MediTender.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null) 
-                return Ok(new { Message = "If the email exists, a reset code will be sent." }); // Security best practice
-
-            var resetCode = new Random().Next(100000, 999999).ToString();
-            user.ResetPasswordToken = resetCode;
-            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
-            
-            await _dbContext.SaveChangesAsync();
-
-            var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
-            await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
-
-            return Ok(new { Message = "If the email exists, a reset code will be sent." });
-        }
-
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null || user.ResetPasswordToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
-                return BadRequest(new { Message = "Invalid or expired reset code." });
-
-            var passwordHasher = new PasswordHasher<ApplicationUser>();
-            user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
-            
-            user.ResetPasswordToken = string.Empty;
-            user.TokenExpiration = null;
-            
-            await _dbContext.SaveChangesAsync();
-
-            return Ok(new { Message = "Password has been reset successfully. You can now login." });
-        }
+       
     }
 
     public class VerifyEmailRequest

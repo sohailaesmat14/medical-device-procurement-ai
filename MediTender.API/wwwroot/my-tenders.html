@@ -135,6 +135,68 @@
         </div>
 
         <script>
+            function escapeHTML(str) {
+                if (!str) return "";
+                return str
+                    .toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+
+            document.addEventListener("DOMContentLoaded", async () => {
+                const token = sessionStorage.getItem("jwt_token");
+                if (!token) {
+                    window.location.replace("login.html");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/my-tenders`, {
+                        method: "GET",
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const tenders = await response.json();
+                        document.getElementById("loadingState").style.display = "none";
+
+                        if (tenders.length === 0) {
+                            document.getElementById("emptyState").style.display = "block";
+                        } else {
+                            const tbody = document.getElementById("tendersBody");
+                            tenders.forEach(tender => {
+                                const date = new Date(tender.createdAt).toLocaleDateString() + " " + new Date(tender.createdAt).toLocaleTimeString();
+                                
+                                // 2. Escape the user-generated title before injecting it into innerHTML
+                                const safeTitle = escapeHTML(tender.title);
+                                
+                                const tr = document.createElement("tr");
+                                tr.innerHTML = `
+                                    <td><strong>#${tender.id}</strong></td>
+                                    <td>${safeTitle}</td>
+                                    <td>${date}</td>
+                                    <td>
+                                        <button class="btn-view" onclick="loadTenderDashboard(${tender.id})">📊 View Matrix</button>
+                                    </td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                            document.getElementById("tendersTable").style.display = "table";
+                        }
+                    } else {
+                        throw new Error("Failed to fetch tenders.");
+                    }
+                } catch (error) {
+                    document.getElementById("loadingState").innerText = "Error loading data. Please try again.";
+                    document.getElementById("loadingState").style.color = "#dc2626";
+                }
+            });
+            
             document.addEventListener("DOMContentLoaded", async () => {
                 const token = sessionStorage.getItem("jwt_token");
                 if (!token) {

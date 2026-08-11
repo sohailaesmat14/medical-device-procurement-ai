@@ -5,6 +5,7 @@ using MediTender.API.Data;
 using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.Extensions.Logging; 
 
 namespace MediTender.API.Controllers
 {
@@ -14,11 +15,13 @@ namespace MediTender.API.Controllers
     {
         private readonly IPaymobService _paymobService;
         private readonly ApplicationDbContext _dbContext;
+        private readonly ILogger<PaymentController> _logger; 
 
-        public PaymentController(IPaymobService paymobService, ApplicationDbContext dbContext)
+        public PaymentController(IPaymobService paymobService, ApplicationDbContext dbContext, ILogger<PaymentController> logger)
         {
             _paymobService = paymobService;
             _dbContext = dbContext;
+            _logger = logger;
         }
 
         [HttpPost("initiate")]
@@ -45,8 +48,9 @@ namespace MediTender.API.Controllers
                 var iframeUrl = await _paymobService.GetPaymentIframeUrlAsync(amount, userEmail, request.PlanType);
                 return Ok(new { CheckoutUrl = iframeUrl });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error connecting to Paymob payment gateway for user {Email}", userEmail);
                 return StatusCode(500, new { Message = "Error connecting to payment gateway." });
             }
         }
@@ -56,6 +60,7 @@ namespace MediTender.API.Controllers
         {
             if (!_paymobService.VerifyHmac(hmac, payload.GetRawText()))
             {
+                _logger.LogWarning("Unauthorized webhook attempt. Invalid HMAC signature.");
                 return Unauthorized();
             }
 
@@ -100,15 +105,29 @@ namespace MediTender.API.Controllers
                         _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
                         await _dbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
+                        
+                        _logger.LogInformation("Payment successful and plan updated for user {Email}. OrderId: {OrderId}", userEmail, orderId);
+                    }
+                    else
+                    {
+                        // 2. Prevent Silent Money Loss: Log critical alert for orphaned payments
+                        _logger.LogWarning(
+                            "CRITICAL: ORPHAN PAYMENT DETECTED! OrderId: {OrderId}, Amount: {AmountCents} cents, Billed Email: {Email}. " +
+                            "The payment was successful, but no matching user was found in the database. Manual reconciliation is required.", 
+                            orderId, amountCents, userEmail);
+                            
+                        await transaction.RollbackAsync();
                     }
                 }
-                catch (DbUpdateException)
+                catch (DbUpdateException dbEx)
                 {
+                    _logger.LogWarning(dbEx, "Concurrency issue while processing OrderId: {OrderId}. Likely a duplicate webhook call.", orderId);
                     await transaction.RollbackAsync();
                     return Ok(); 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Unexpected error processing webhook for OrderId: {OrderId}", orderId);
                     await transaction.RollbackAsync();
                     throw;
                 }
