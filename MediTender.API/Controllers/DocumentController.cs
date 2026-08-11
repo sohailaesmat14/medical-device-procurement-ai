@@ -215,13 +215,13 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("extract-standard")]
-        public async Task<IActionResult> ExtractStandardRequirements([FromBody] ExtractStandardRequest request, [FromServices] IStandardExtractionService extractionService)
+        public async Task<IActionResult> ExtractStandardRequirements([FromBody] ExtractStandardRequest request, [FromServices] IStandardExtractionService extractionService, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(request.FileName) || request.TenderId <= 0)
                 return BadRequest("Invalid file name or tender ID.");
 
             int userId = GetCurrentUserId();
-            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
@@ -234,8 +234,13 @@ namespace MediTender.API.Controllers
 
             try
             {
-                var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId);
+                var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId, cancellationToken);
                 return Ok(requirements);
+            }
+            catch (OperationCanceledException)
+            {
+                await RefundQuotaAsync(cost);
+                return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
@@ -243,7 +248,8 @@ namespace MediTender.API.Controllers
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
-        }
+        }        
+        
         [Authorize(Roles = "Committee")]
         [HttpDelete("reset-system")]
         public async Task<IActionResult> ResetSystem([FromServices] Qdrant.Client.QdrantClient qdrantClient)

@@ -4,6 +4,7 @@ using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using MediTender.API.Models;
 using MediTender.API.Data; 
+using Microsoft.EntityFrameworkCore;
 
 namespace MediTender.API.Services
 {
@@ -21,9 +22,9 @@ namespace MediTender.API.Services
             _dbContext = dbContext;
         }
 
-        public async Task<List<Standard>> ExtractRequirementsAsync(string fileName, int tenderId)        
+        public async Task<List<Standard>> ExtractRequirementsAsync(string fileName, int tenderId, CancellationToken cancellationToken = default)
         {
-            var searchVector = await _geminiService.GetEmbeddingAsync("mandatory technical specifications, requirements, physical characteristics, performance parameters");
+            var searchVector = await _geminiService.GetEmbeddingAsync("mandatory technical specifications, requirements, physical characteristics, performance parameters", cancellationToken);
 
             var filter = new Filter();
             filter.Must.Add(new Condition { Field = new FieldCondition { Key = "fileName", Match = new Match { Keyword = fileName } } });
@@ -32,7 +33,8 @@ namespace MediTender.API.Services
                 collectionName: _collectionName,
                 vector: searchVector,
                 filter: filter,
-                limit: 100);
+                limit: 100,
+                cancellationToken: cancellationToken);
 
             var contextBuilder = new StringBuilder();
             foreach (var result in searchResults)
@@ -64,7 +66,7 @@ namespace MediTender.API.Services
             {context}
             ";
             
-            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt);
+            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, false, cancellationToken);
             var cleanedJson = aiResponse.Replace("```json", "").Replace("```", "").Trim();
             
             try
@@ -75,7 +77,7 @@ namespace MediTender.API.Services
 
                 if (extractedDtos != null && extractedDtos.Any())
                 {
-                    var oldStandards = _dbContext.Standards.Where(s => s.TenderId == tenderId);
+                    var oldStandards = await _dbContext.Standards.Where(s => s.TenderId == tenderId).ToListAsync(cancellationToken);
                     _dbContext.Standards.RemoveRange(oldStandards);
 
                     foreach (var dto in extractedDtos)
@@ -92,7 +94,7 @@ namespace MediTender.API.Services
                         _dbContext.Standards.Add(req);
                         requirements.Add(req); 
                     }
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
                 return requirements;

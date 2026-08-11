@@ -283,7 +283,7 @@
                             fileName: standardFile,
                             tenderId: parseInt(currentTenderId)
                         }),
-                        timeout: 90000 
+                        timeout: 300000 
                     });
                     
                     if (!extractRes.ok)
@@ -315,7 +315,7 @@
                             tenderId: parseInt(currentTenderId),
                             vendorNames: vendors
                         }),
-                        timeout: 120000
+                        timeout: 420000
                     });
 
                     if (!compareRes.ok)
