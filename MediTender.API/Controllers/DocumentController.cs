@@ -555,6 +555,49 @@ namespace MediTender.API.Controllers
             }
         }
         
+        [HttpPost("override-financial-price")]
+        public async Task<IActionResult> OverrideFinancialPrice([FromBody] FinancialOverrideRequest request)
+        {
+            int userId = GetCurrentUserId();
+            var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
+            if (tender == null)
+                return Unauthorized(new { Message = "Access denied to this tender." });
+
+            try
+            {
+                var evaluation = await _dbContext.OfferEvaluations
+                    .FirstOrDefaultAsync(e => e.TenderId == request.TenderId && e.VendorName == request.VendorName);
+
+                if (evaluation == null) 
+                    return NotFound("Evaluation not found in database.");
+
+                evaluation.TotalPrice = request.NewPrice;
+
+                var vendorOffer = await _dbContext.VendorOffers
+                    .FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
+                
+                if (vendorOffer != null)
+                {
+                    vendorOffer.TotalPrice = request.NewPrice;
+                }
+
+                await _dbContext.SaveChangesAsync();
+                
+                return Ok(new { Message = "Financial price has been manually verified and updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error overriding financial price for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
+                return StatusCode(500, new { Message = "An internal server error occurred while updating the financial price." });
+            }
+        }
+
+        public class FinancialOverrideRequest
+        {
+            public int TenderId { get; set; }
+            public string VendorName { get; set; } = string.Empty;
+            public decimal NewPrice { get; set; }
+        }
         public class VendorOverrideRequest
         {
             public int TenderId { get; set; }
@@ -566,5 +609,6 @@ namespace MediTender.API.Controllers
             public string FileName { get; set; } = string.Empty;
             public int TenderId { get; set; }
         }
+
     }
 }

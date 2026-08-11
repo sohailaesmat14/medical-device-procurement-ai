@@ -48,12 +48,13 @@ namespace MediTender.API.Services
             if (string.IsNullOrWhiteSpace(context))
                 throw new Exception("No context found in the database for this file.");
 
-            var prompt = $@"
+           var prompt = $@"
             You are a Biomedical Procurement Expert. Extract the technical specifications from the following text.
             For each requirement, extract a short category or item name, a brief description, and the exact specification.
-            Determine if it is strictly mandatory (must-have) or optional/preferred.
             
-            Set 'IsMandatory' to true ONLY IF the requirement explicitly contains words like 'Mandatory', 'Must', 'Shall', or 'Required'. If it contains words like 'Preferable', 'Optional', or has no strict enforcing word, you MUST set 'IsMandatory' to false.
+            Determine if it is strictly mandatory (must-have) or optional/preferred based on clinical and technical necessity.
+            Set 'IsMandatory' to true if the context implies it is an essential requirement, a core clinical function, or uses strong enforcing language (including synonyms like 'essential', 'crucial', 'compulsory', or Arabic equivalents like 'يجب', 'أساسي', 'إلزامي'). 
+            Set 'IsMandatory' to false ONLY if the text explicitly describes it as 'optional', 'preferred', 'added advantage', or 'nice-to-have'.
 
             Return ONLY a valid JSON array of objects. Each object must exactly match the C# model properties and have the following keys:
             - ""ItemName"": string
