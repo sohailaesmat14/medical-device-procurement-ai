@@ -98,7 +98,24 @@
             padding: 10px;
             border-radius: 6px;
         }
-        
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-container input {
+            padding-right: 40px; /* Space for the toggle icon */
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #64748b;
+            padding: 0;
+        }
         .login-link {
             margin-top: 20px;
             font-size: 14px;
@@ -139,12 +156,18 @@
             
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Create a strong password" required minlength="6">
+                <div class="password-container">
+                    <input type="password" id="password" placeholder="Create a strong password" required minlength="6">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)">👁️</button>
+                </div>
             </div>
 
             <div class="input-group">
                 <label for="confirmPassword">Confirm Password</label>
-                <input type="password" id="confirmPassword" placeholder="Repeat your password" required minlength="6">
+                <div class="password-container">
+                    <input type="password" id="confirmPassword" placeholder="Repeat your password" required minlength="6">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>
+                </div>
             </div>
 
             <button type="submit" class="signup-btn">Sign Up & Continue</button>
@@ -191,6 +214,16 @@
             } catch (error) {
                 errorMsg.innerText = "Server connection error.";
                 errorMsg.style.display = "block";
+            }
+        }
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                button.innerText = "🙈"; 
+            } else {
+                input.type = "password";
+                button.innerText = "👁️"; 
             }
         }
     </script>

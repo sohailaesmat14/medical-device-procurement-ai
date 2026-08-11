@@ -111,6 +111,24 @@
         .signup-link a:hover {
             text-decoration: underline;
         }
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-container input {
+            padding-right: 40px; /* Space for the toggle icon */
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #64748b;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -133,7 +151,10 @@
             
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter your password" required>
+                <div class="password-container">
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('password', this)" title="Toggle Password Visibility">👁️</button>
+                </div>
             </div>
 
             <button type="submit" class="login-btn">Sign In</button>
@@ -185,7 +206,16 @@
                 loginBtn.innerText = "Sign In";
             }
         }    
-    
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+                button.innerText = "🙈"; 
+            } else {
+                input.type = "password";
+                button.innerText = "👁️"; 
+            }
+        }
     </script>
 </body>
 </html>
