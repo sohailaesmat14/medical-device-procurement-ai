@@ -118,3 +118,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.appendChild(widgetContainer);
     }
 });
+
+window.toggleDirection = function() {
+    const htmlDoc = document.documentElement;
+    const currentDir = htmlDoc.getAttribute("dir");
+
+    if (currentDir === "rtl") {
+        htmlDoc.setAttribute("dir", "ltr");
+        htmlDoc.setAttribute("lang", "en");
+    } else {
+        htmlDoc.setAttribute("dir", "rtl");
+        htmlDoc.setAttribute("lang", "ar");
+    }
+};
