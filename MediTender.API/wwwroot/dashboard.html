@@ -1115,9 +1115,17 @@
             }
 
             function exportToExcel() {
-                const table = document.querySelector(".matrix-container table");
+                const originalTable = document.querySelector(".matrix-container table");
+                const clonedTable = originalTable.cloneNode(true);
 
-                TableToExcel.convert(table, {
+                const rows = clonedTable.querySelectorAll("tr");
+                rows.forEach(row => {
+                    if (row.style.display === "none") {
+                        row.parentNode.removeChild(row);
+                    }
+                });
+
+                TableToExcel.convert(clonedTable, {
                     name: "MediTender_Analysis_Report.xlsx",
                     sheet: {
                         name: "Technical Analysis",
