@@ -527,25 +527,34 @@ namespace MediTender.API.Controllers
                 }
 
                 evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
-                evaluation.FinalDecision = "Recommended for Acceptance";
+
+                bool hasFailedMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Not Met" || d.Status == "Error"));
+                bool hasPartialOrMissingMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned"));
+
+                if (hasFailedMandatory)
+                    evaluation.FinalDecision = "Recommended for Rejection";
+                else if (hasPartialOrMissingMandatory)
+                    evaluation.FinalDecision = "Pending Manual Review";
+                else
+                    evaluation.FinalDecision = "Recommended for Acceptance";
 
                 var vendorOffer = await _dbContext.VendorOffers.FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
                 if (vendorOffer != null)
                 {
-                    vendorOffer.IsAccepted = true;
+                    vendorOffer.IsAccepted = evaluation.FinalDecision == "Recommended for Acceptance" || evaluation.FinalDecision == "Pending Manual Review";
                     vendorOffer.EvaluationScore = evaluation.TotalScore;
                 }
 
                 await _dbContext.SaveChangesAsync();
-                return Ok(new { Message = "Vendor completely approved and saved to database." });
+                return Ok(new { Message = "Vendor decision completely updated and saved to database." });
             }
-           catch (Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error overriding vendor decision for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing the vendor decision override." });
             }
         }
-
+        
         public class VendorOverrideRequest
         {
             public int TenderId { get; set; }
