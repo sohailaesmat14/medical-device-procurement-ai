@@ -81,11 +81,17 @@ namespace MediTender.API.Controllers
                     {
                         user.Plan = "monthly";
                         user.QuotaPoints += 2000;
+                        user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
+                            ? user.SubscriptionExpiresAt.AddDays(30) 
+                            : DateTime.UtcNow.AddDays(30);
                     }
                     else if (amountCents == 2200000) 
                     {
                         user.Plan = "annually";
                         user.QuotaPoints += 99999;
+                        user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
+                            ? user.SubscriptionExpiresAt.AddDays(365) 
+                            : DateTime.UtcNow.AddDays(365);
                     }
                     
                     _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });

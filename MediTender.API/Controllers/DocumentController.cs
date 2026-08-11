@@ -185,7 +185,7 @@ namespace MediTender.API.Controllers
             var quotaResult = await TryConsumeQuotaAsync(cost);
             if (!quotaResult.Success)
             {
-                return BadRequest(new { Message = $"❌ Your current balance ({quotaResult.Remaining} points) isn't enough. You need ({cost} points)." });
+                return BadRequest(new { Message = quotaResult.Error });
             }
 
             try
@@ -234,7 +234,7 @@ namespace MediTender.API.Controllers
             var quotaResult = await TryConsumeQuotaAsync(cost);
             if (!quotaResult.Success)
             {
-                return BadRequest(new { Message = $"❌ Your current balance ({quotaResult.Remaining} points) isn't enough. You need ({cost} points)." });
+                return BadRequest(new { Message = quotaResult.Error });
             }
 
             try
@@ -313,37 +313,49 @@ namespace MediTender.API.Controllers
             public int TenderId { get; set; } = 1;
         }
         
-        private async Task<(bool Success, int Remaining)> TryConsumeQuotaAsync(int cost)
+        private async Task<(bool Success, int Remaining, string Error)> TryConsumeQuotaAsync(int cost)
         {
             if (User.IsInRole("Committee"))
-                return (true, 9999);
+                return (true, 9999, string.Empty);
 
             var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdStr, out int userId))
-                return (false, 0);
+                return (false, 0, "Invalid user token.");
 
             using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
                 var user = await _dbContext.Users.FindAsync(userId);
-                if (user == null || user.QuotaPoints < cost)
+                if (user == null)
                 {
                     await transaction.RollbackAsync();
-                    return (false, user?.QuotaPoints ?? 0);
+                    return (false, 0, "User not found.");
+                }
+
+                if (user.SubscriptionExpiresAt < DateTime.UtcNow)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, user.QuotaPoints, "❌ Your subscription or free trial has expired. Please renew your plan to continue.");
+                }
+
+                if (user.QuotaPoints < cost)
+                {
+                    await transaction.RollbackAsync();
+                    return (false, user.QuotaPoints, $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points).");
                 }
 
                 user.QuotaPoints -= cost;
                 await _dbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return (true, user.QuotaPoints);
+                return (true, user.QuotaPoints, string.Empty);
             }
             catch
             {
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
+        }        
         private async Task RefundQuotaAsync(int amount)
         {
             if (User.IsInRole("Committee")) return;
@@ -381,6 +393,11 @@ namespace MediTender.API.Controllers
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null) return Unauthorized();
 
+            if (user.SubscriptionExpiresAt < DateTime.UtcNow)
+            {
+                return BadRequest(new { Success = false, Message = "❌ Your subscription or free trial has expired. Please renew your plan to continue." });
+            }
+
             if (user.Plan == "free" && request.VendorCount > 2)
             {
                 return BadRequest(new { Success = false, Message = "❌ Free plan limits evaluations to a maximum of 2 vendors per tender. Please upgrade your plan." });
@@ -390,7 +407,7 @@ namespace MediTender.API.Controllers
                 return Ok(new { Success = true, RemainingQuota = user.QuotaPoints });
                 
             return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
-        }
+        }        
         public class QuotaRequest
         {
             public int VendorCount { get; set; }

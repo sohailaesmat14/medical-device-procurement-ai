@@ -40,7 +40,8 @@ namespace MediTender.API.Controllers
                 FullName = request.FullName,
                 Email = request.Email,
                 Plan = "free",
-                QuotaPoints = 200
+                QuotaPoints = 200,
+                SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7) 
             };
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
