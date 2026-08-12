@@ -29,13 +29,58 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
+        [HttpPost("login")]
+        [EnableRateLimiting("LoginPolicy")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user != null)
+            {
+                if (!user.IsEmailVerified)
+                    return Unauthorized(new { Message = "Please verify your email before logging in." });
+
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+                if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    var token = GenerateJwtToken(user);
+                    bool isExpired = user.SubscriptionExpiresAt < DateTime.UtcNow;
+                    
+                    return Ok(new { 
+                        Token = token, 
+                        Message = "Login Successful", 
+                        Plan = user.Plan, 
+                        FullName = user.FullName,
+                        IsExpired = isExpired
+                    });
+                }
+            }
+
+            return Unauthorized(new { Message = "Invalid email or password" });
+        }       
+
         [HttpPost("signup")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
         {
-            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
+            var existingUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            
+            if (existingUser != null)
             {
-                return BadRequest(new { Message = "Email already exists." });
+                if (existingUser.IsEmailVerified)
+                {
+                    return BadRequest(new { Message = "Email already exists." });
+                }
+                
+                if (existingUser.TokenExpiration > DateTime.UtcNow)
+                {
+                    return BadRequest(new { Message = "An unverified account with this email already exists. Please verify or wait for the token to expire." });
+                }
+                
+                _dbContext.Users.Remove(existingUser);
+                await _dbContext.SaveChangesAsync();
             }
 
             var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
@@ -49,12 +94,14 @@ namespace MediTender.API.Controllers
                 SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
                 IsEmailVerified = false,
                 VerificationToken = verificationCode,
-                TokenExpiration = DateTime.UtcNow.AddHours(24) 
+                TokenExpiration = DateTime.UtcNow.AddMinutes(15),
+                Role = "Vendor",
+                FailedVerificationAttempts = 0
             };
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-            user.Role = request.Email.EndsWith("@meditender.gov.eg") ? "Committee" : "Vendor";
+            
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
@@ -72,13 +119,14 @@ namespace MediTender.API.Controllers
                         <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{verificationCode}</span>
                     </div>
                     
-                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 24 hours.</p>
+                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 15 minutes.</p>
                 </div>
                 <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
                     <p style='margin: 0;'>&copy; {DateTime.Now.Year} MediTender Smart Assistant. All rights reserved.</p>
                     <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
                 </div>
             </div>";
+            
             await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
 
             return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
@@ -90,12 +138,29 @@ namespace MediTender.API.Controllers
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             
-            if (user == null || user.VerificationToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+            if (user == null || user.TokenExpiration < DateTime.UtcNow)
                 return BadRequest(new { Message = "Invalid or expired verification code." });
+
+            if (user.VerificationToken != request.Code)
+            {
+                user.FailedVerificationAttempts++;
+                if (user.FailedVerificationAttempts >= 5)
+                {
+                    user.VerificationToken = string.Empty;
+                    user.TokenExpiration = DateTime.UtcNow.AddMinutes(-1);
+                    await _dbContext.SaveChangesAsync();
+                    return BadRequest(new { Message = "Too many failed attempts. Your code has been invalidated. Please request a new one." });
+                }
+                
+                await _dbContext.SaveChangesAsync();
+                return BadRequest(new { Message = "Invalid verification code." });
+            }
 
             user.IsEmailVerified = true;
             user.VerificationToken = string.Empty; 
             user.TokenExpiration = null; 
+            user.FailedVerificationAttempts = 0;
+            
             await _dbContext.SaveChangesAsync();
 
             var token = GenerateJwtToken(user);
@@ -114,6 +179,7 @@ namespace MediTender.API.Controllers
             
             user.ResetPasswordToken = resetCode;
             user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            user.FailedVerificationAttempts = 0;
             
             await _dbContext.SaveChangesAsync();
 
@@ -128,14 +194,31 @@ namespace MediTender.API.Controllers
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null || user.ResetPasswordToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+            
+            if (user == null || user.TokenExpiration < DateTime.UtcNow)
                 return BadRequest(new { Message = "Invalid or expired reset code." });
+
+            if (user.ResetPasswordToken != request.Code)
+            {
+                user.FailedVerificationAttempts++;
+                if (user.FailedVerificationAttempts >= 5)
+                {
+                    user.ResetPasswordToken = string.Empty;
+                    user.TokenExpiration = DateTime.UtcNow.AddMinutes(-1);
+                    await _dbContext.SaveChangesAsync();
+                    return BadRequest(new { Message = "Too many failed attempts. Your code has been invalidated. Please request a new one." });
+                }
+                
+                await _dbContext.SaveChangesAsync();
+                return BadRequest(new { Message = "Invalid reset code." });
+            }
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
             
             user.ResetPasswordToken = string.Empty;
             user.TokenExpiration = null;
+            user.FailedVerificationAttempts = 0;
             
             await _dbContext.SaveChangesAsync();
 
@@ -218,13 +301,14 @@ namespace MediTender.API.Controllers
             var newCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             
             user.VerificationToken = newCode;
-            user.TokenExpiration = DateTime.UtcNow.AddHours(24);
+            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            user.FailedVerificationAttempts = 0;
 
             await _dbContext.SaveChangesAsync();
 
             try
             {
-                var emailBody = $"<h3>MediProcure AI</h3><p>Your new verification code is: <strong>{newCode}</strong></p><p>This code expires in 24 hours.</p>";
+                var emailBody = $"<h3>MediProcure AI</h3><p>Your new verification code is: <strong>{newCode}</strong></p><p>This code expires in 15 minutes.</p>";
                 await _emailService.SendEmailAsync(user.Email, "New Verification Code", emailBody);
             }
             catch (Exception)
@@ -234,50 +318,8 @@ namespace MediTender.API.Controllers
 
             return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
         }
-        [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicy")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-
-            if (user != null)
-            {
-                if (!user.IsEmailVerified)
-                    return Unauthorized(new { Message = "Please verify your email before logging in." });
-
-                var passwordHasher = new PasswordHasher<ApplicationUser>();
-                var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-
-                if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
-                {
-                    var token = GenerateJwtToken(user);
-                    bool isExpired = user.SubscriptionExpiresAt < DateTime.UtcNow;
-                    
-                    return Ok(new { 
-                        Token = token, 
-                        Message = "Login Successful", 
-                        Plan = user.Plan, 
-                        FullName = user.FullName,
-                        IsExpired = isExpired
-                    });
-                }
-            }
-
-            return Unauthorized(new { Message = "Invalid email or password" });
-        }
-
     }
-    
-    public class LoginRequest
-    {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [MinLength(6)]
-        public string Password { get; set; } = string.Empty;
-    }
     public class ResendVerificationRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
@@ -314,6 +356,17 @@ namespace MediTender.API.Controllers
     public class ForgotPasswordRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+    }
+
+    public class LoginRequest
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; } = string.Empty;
     }
     public class UpdatePlanRequest
     {
