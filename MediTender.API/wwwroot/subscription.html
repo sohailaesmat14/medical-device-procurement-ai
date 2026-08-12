@@ -243,76 +243,82 @@
     </footer>
 
     <script>
-        async function selectPlan(planType, quotaPoints, btnElement) {
-            const email = sessionStorage.getItem("user_email");
-            const token = sessionStorage.getItem("jwt_token");
+    document.addEventListener("DOMContentLoaded", () => {
+        const currentPlan = sessionStorage.getItem("meditender_plan");
+        const freeBtn = document.querySelector('.btn-free');
+        if (currentPlan && freeBtn) {
+            freeBtn.innerText = "Current Plan";
+            freeBtn.disabled = true;
+            freeBtn.style.backgroundColor = "#94a3b8";
+            freeBtn.style.cursor = "not-allowed";
+        }
+    });
 
-            if (!email || !token) {
-                alert("Please log in first.");
-                window.location.replace("login.html");
-                return;
-            }
+    async function selectPlan(planType, quotaPoints, btnElement) {
+        const email = sessionStorage.getItem("user_email");
+        const token = sessionStorage.getItem("jwt_token");
 
-            const allBtns = document.querySelectorAll('.subscribe-btn');
-            allBtns.forEach(btn => btn.disabled = true);
-            
-            const originalText = btnElement.innerText;
-            btnElement.innerText = "Processing... ⏳";
+        if (!email || !token) {
+            showToast("Please log in first.", "warning");
+            setTimeout(() => window.location.replace("login.html"), 1500);
+            return;
+        }
 
-            const resetButtons = () => {
-                allBtns.forEach(btn => btn.disabled = false);
-                btnElement.innerText = originalText;
-            };
+        const allBtns = document.querySelectorAll('.subscribe-btn');
+        allBtns.forEach(btn => btn.disabled = true);
+        
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "Processing... ⏳";
 
-            try {
-                if (planType === 'free') {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/update-plan`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ email: email, plan: planType, quotaPoints: quotaPoints })
-                    });
+        const resetButtons = () => {
+            allBtns.forEach(btn => btn.disabled = false);
+            btnElement.innerText = originalText;
+        };
 
-                    if (response.ok) {
-                        // FIX: This used to claim the Free plan was "selected successfully"
-                        // and cache the requested quotaPoints locally, even though the
-                        // backend intentionally does NOT grant/refresh free quota here
-                        // (that only happens once, at signup, to prevent abuse). Show the
-                        // server's real message instead of an assumed success message.
-                        const data = await response.json().catch(() => ({}));
-                        alert(data.message || "You're on the Free plan. Redirecting...");
-                        sessionStorage.removeItem("meditender_cached_quota");
-                        window.location.replace("upload.html");
-                    } else {
-                        alert("Failed to update subscription plan.");
-                        resetButtons();
-                    }
-                    
+        try {
+            if (planType === 'free') {
+                const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/update-plan`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email: email, plan: planType, quotaPoints: quotaPoints })
+                });
+
+                if (response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    showToast(data.message || "Redirecting...", "info");
+                    sessionStorage.removeItem("meditender_cached_quota");
+                    setTimeout(() => window.location.replace("upload.html"), 1500);
                 } else {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Payment/initiate`, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ email: email, planType: planType })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        window.location.replace(data.checkoutUrl); // Used replace() here for consistency
-                    } else {
-                        alert("Failed to initiate payment.");
-                        resetButtons();
-                    }
+                    showToast("Failed to update subscription plan.", "error");
+                    resetButtons();
                 }
-            } catch (error) {
-                alert("Server connection error.");
-                resetButtons();
+                
+            } else {
+                const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Payment/initiate`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ email: email, planType: planType })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    window.location.replace(data.checkoutUrl); 
+                } else {
+                    showToast("Failed to initiate payment.", "error");
+                    resetButtons();
+                }
             }
-        }    
+        } catch (error) {
+            showToast(error.message || "Server connection error.", "error");
+            resetButtons();
+        }
+    }
     </script>
 </body>
 </html>

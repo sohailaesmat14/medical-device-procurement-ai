@@ -1,25 +1,57 @@
-// FIX: API_BASE_URL was hardcoded to localhost, which would silently break in any
-// deployed environment. This now uses localhost only when actually running locally,
-// and otherwise falls back to a same-origin relative path so the app keeps working
-// if the API is served from the same host/domain as these static files. If your API
-// lives on a different domain in production, replace the fallback below with your
-// real API URL.
 const CONFIG = {
     API_BASE_URL:
         window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:5172"
-            : window.location.origin // TODO: replace with your production API URL if it's on a different host
+            : window.location.origin 
+};
+
+const style = document.createElement('style');
+style.innerHTML = `
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast { background-color: #1e293b; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); font-size: 14px; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(100%); animation: slideIn 0.3s forwards; min-width: 250px; max-width: 350px; font-family: system-ui, -apple-system, sans-serif;}
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error { border-left: 4px solid #ef4444; }
+.toast.info { border-left: 4px solid #3b82f6; }
+.toast.warning { border-left: 4px solid #f59e0b; }
+.toast-close { margin-left: auto; cursor: pointer; font-weight: bold; color: #94a3b8; }
+.toast-close:hover { color: white; }
+@keyframes slideIn { to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(10px); } }
+`;
+document.head.appendChild(style);
+
+window.showToast = function(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    let icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+    toast.innerHTML = `<span>${icon}</span><span style="flex-grow: 1;">${message}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 };
 
 async function fetchWithTimeout(url, options = {}) {
     const timeout = options.timeout || 60000;
-
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
-
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(id);
+        
+        if (response.status === 401) {
+            performLogout();
+            return Promise.reject(new Error("Session expired. Please log in again."));
+        }
+        
         return response;
     } catch (error) {
         clearTimeout(id);
@@ -28,14 +60,8 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 function performLogout() {
-    sessionStorage.removeItem("jwt_token");
-    sessionStorage.removeItem("user_name");
-    sessionStorage.removeItem("user_email");
-    sessionStorage.removeItem("meditender_plan");
-    sessionStorage.removeItem("meditender_quota");
-    sessionStorage.removeItem("meditender_cached_quota");
-
-    window.location.replace("home.html");
+    sessionStorage.clear();
+    window.location.replace("login.html");
 }
 
 window.togglePasswordVisibility = function (inputId, button) {
@@ -49,14 +75,6 @@ window.togglePasswordVisibility = function (inputId, button) {
     }
 };
 
-// FIX: This entire initialization block used to be registered TWICE via two nearly
-// identical "DOMContentLoaded" listeners. Both ran on every page load: the first
-// built a floating quota/logout widget with no id (so it could never be found and
-// removed), and the second built its own widget (with caching) after trying — and
-// failing — to remove the first one by id. The visible result was a duplicated
-// quota badge + logout button stacked on top of each other on every protected page,
-// plus a redundant, uncached "/api/Document/check-quota" network call on every load.
-// There is now a single listener that does the caching-aware version only.
 document.addEventListener("DOMContentLoaded", async () => {
     const token = sessionStorage.getItem("jwt_token");
     const currentPage = window.location.pathname.toLowerCase();
@@ -75,14 +93,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !currentPage.includes("home.html")) {
-        // Quota caching logic — avoids re-fetching on every single page navigation.
-        // Pages that consume quota (e.g. processing.html) explicitly clear this cache
-        // key after a successful operation so the badge stays accurate.
         let remainingQuota = sessionStorage.getItem("meditender_cached_quota");
 
         if (!remainingQuota) {
             try {
-                const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                const quotaRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -96,10 +111,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                     remainingQuota = quotaData.remainingQuota;
                     sessionStorage.setItem("meditender_cached_quota", remainingQuota);
                 } else {
-                    remainingQuota = "...";
+                    remainingQuota = "N/A";
                 }
             } catch (e) {
-                remainingQuota = "...";
+                remainingQuota = "N/A";
             }
         }
 
@@ -114,10 +129,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         widgetContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; display: flex; align-items: center; gap: 10px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;`;
 
         const quotaBadge = document.createElement("div");
-        // FIX: remainingQuota ultimately comes from the server, but building the
-        // badge via createElement/textContent (rather than trusting a raw innerHTML
-        // interpolation) keeps this safe even if that ever changes to include
-        // free-form text in the future.
         const coinSpan = document.createElement("span");
         coinSpan.textContent = "🪙 ";
         const quotaValue = document.createElement("b");

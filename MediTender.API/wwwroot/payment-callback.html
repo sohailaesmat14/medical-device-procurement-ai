@@ -44,14 +44,12 @@
                 return;
             }
 
-            // Poll a few times in case the Paymob webhook hasn't finished processing
-            // yet by the time the browser gets redirected back here.
             const maxAttempts = 6;
             const delayMs = 1500;
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 try {
-                    const res = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/me`, {
+                    const res = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/me`, {
                         headers: { "Authorization": `Bearer ${token}` }
                     });
 
@@ -63,7 +61,6 @@
                         }
                     }
                 } catch (e) {
-                    // network hiccup — just retry
                 }
 
                 statusSubtext.innerText = `Confirming with server... (${attempt}/${maxAttempts})`;
@@ -72,7 +69,7 @@
             statusMessage.innerText = "Still Confirming Your Payment ⏳";
             statusMessage.style.color = "#f59e0b";
             statusSubtext.innerText = "This is taking longer than usual. If your payment succeeded, your plan will update shortly — you can also refresh this page.";
-        });
+        });    
     </script>
 </body>
 </html>

@@ -454,16 +454,13 @@
                 editingVendorId = id;
             };
 
-            // 1. Fix addVendor Function
-            window.addVendor = function() {
+            function addVendor() {
                 const nameInput = document.getElementById('vendorName').value.trim();
-                
-                // BUG 1 FIXED: Use the correct HTML IDs
                 const techInput = document.getElementById('vendorTechFile'); 
                 const finInput = document.getElementById('vendorFinFile');
 
                 if (!nameInput) {
-                    alert("Please enter a vendor name.");
+                    showToast("Please enter a vendor name.", "warning");
                     return;
                 }
 
@@ -482,7 +479,6 @@
 
                     editingVendorId = null;
                     
-                    // Extra Fix: The button doesn't have an ID, so we select it by class
                     const addBtn = document.querySelector('.add-btn'); 
                     if(addBtn) addBtn.innerText = "Add Vendor to Queue";
                     
@@ -491,12 +487,12 @@
                     
                 } else {
                     if (techInput.files.length === 0 || finInput.files.length === 0) {
-                        alert("Please select both Technical and Financial files for the new vendor.");
+                        showToast("Please select both Technical and Financial files for the new vendor.", "warning");
                         return;
                     }
 
                     vendorQueue.push({
-                        id: Date.now(), // Unique ID generated here
+                        id: Date.now(), 
                         name: nameInput,
                         techFile: techInput.files[0],
                         finFile: finInput.files[0]
@@ -506,17 +502,8 @@
                 document.getElementById('vendorName').value = "";
                 techInput.value = "";
                 finInput.value = "";
-                
-                // BUG 2 FIXED: Call the correct UI update function
                 updateVendorUI(); 
-            };
-
-            // 2. Fix updateVendorUI Function
-            // FIX: vendor name and file names used to be interpolated straight into
-            // innerHTML with no escaping. A vendor name or PDF filename containing
-            // HTML/script could execute in the page (and, since this same vendor name
-            // gets saved to the database and later rendered elsewhere for committee
-            // members, this was a potential stored-XSS vector, not just a local one).
+            }
             function escapeHTML(str) {
                 if (!str) return "";
                 return str
@@ -611,7 +598,7 @@
                     progressStep.innerText = "Checking AI Quota...";
                     progressContainer.style.display = "block";
 
-                    const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                    const quotaRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -628,7 +615,7 @@
                     }
 
                     progressStep.innerText = "Initializing new Tender ID...";
-                    const initRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/init-tender`, {
+                    const initRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/init-tender`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -661,7 +648,7 @@
                     stdFormData.append("documentType", "Standard");
                     stdFormData.append("tenderId", currentTenderId);
 
-                    let res = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                    let res = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                         method: "POST",
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -684,7 +671,7 @@
                         vTechFormData.append("vendorName", v.name);
                         vTechFormData.append("tenderId", currentTenderId);
 
-                        let vTechRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                        let vTechRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                             method: "POST",
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -701,7 +688,7 @@
                         vFinFormData.append("vendorName", v.name);
                         vFinFormData.append("tenderId", currentTenderId);
 
-                        let vFinRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                        let vFinRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                             method: "POST",
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -731,6 +718,7 @@
                     statusMsg.style.display = "block";
                     statusMsg.innerText = "Error: " + err.message;
                     startBtn.disabled = false;
+                    showToast(err.message, "error");
                 }
             }            
             

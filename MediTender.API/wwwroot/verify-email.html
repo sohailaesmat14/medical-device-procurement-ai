@@ -52,8 +52,8 @@
             const btn = document.getElementById('verifyBtn');
 
             if (!email) {
-                alert("Session expired. Please sign up again.");
-                window.location.replace("signup.html");
+                showToast("Session expired. Please sign up again.", "warning");
+                setTimeout(() => window.location.replace("signup.html"), 1500);
                 return;
             }
 
@@ -61,7 +61,7 @@
             btn.innerText = "Verifying...";
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/verify-email`, {
+                const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/verify-email`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email, code: code })
@@ -87,20 +87,20 @@
                 btn.innerText = "Verify & Continue";
             }
         }
+
         async function resendCode() {
             const email = sessionStorage.getItem("temp_user_email");
             const resendBtn = document.getElementById('resendBtn');
             const errorMsg = document.getElementById('errorMsg');
 
             if (!email) {
-                alert("Session expired. Please sign up again.");
-                window.location.replace("signup.html");
+                showToast("Session expired. Please sign up again.", "warning");
+                setTimeout(() => window.location.replace("signup.html"), 1500);
                 return;
             }
 
-            // Disable button to prevent spamming and show a countdown/loading state
             resendBtn.disabled = true;
-            let timeLeft = 30; // 30 seconds cooldown
+            let timeLeft = 30; 
             
             const countdownInterval = setInterval(() => {
                 resendBtn.innerText = `Wait ${timeLeft}s`;
@@ -113,7 +113,7 @@
             }, 1000);
 
             try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/resend-verification`, {
+                const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/resend-verification`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
@@ -121,7 +121,7 @@
 
                 if (response.ok) {
                     errorMsg.className = "error-msg"; 
-                    errorMsg.style.backgroundColor = "#d1fae5"; // Green success background
+                    errorMsg.style.backgroundColor = "#d1fae5"; 
                     errorMsg.style.color = "#059669";
                     errorMsg.innerText = "A new code has been sent to your email!";
                     errorMsg.style.display = "block";

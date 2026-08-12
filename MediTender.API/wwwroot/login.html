@@ -169,7 +169,6 @@
 
     <script>
         async function performLogin() {
-            
             const user = document.getElementById('username').value;
             const pass = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
@@ -179,8 +178,7 @@
             loginBtn.innerText = "Signing in...";
 
             try {
-                // Fixed: Using the global CONFIG.API_BASE_URL instead of a hardcoded localhost URL
-                const response = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/login`, {
+                const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: user, password: pass })
@@ -190,8 +188,7 @@
                     const data = await response.json();
                     sessionStorage.setItem("jwt_token", data.token);
                     sessionStorage.setItem("user_name", data.fullName || user);
-                    
-                    sessionStorage.setItem("user_email", user); 
+                    sessionStorage.setItem("user_email", user);
                     
                     if (data.plan) {
                         sessionStorage.setItem("meditender_plan", data.plan);
@@ -211,7 +208,7 @@
                 loginBtn.disabled = false;
                 loginBtn.innerText = "Sign In";
             }
-        }
+        }    
     </script>
 </body>
 </html>

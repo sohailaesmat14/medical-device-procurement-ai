@@ -154,7 +154,7 @@
                 }
 
                 try {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/my-tenders`, {
+                    const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/my-tenders`, {
                         method: "GET",
                         headers: {
                             "Authorization": `Bearer ${token}`
@@ -171,8 +171,6 @@
                             const tbody = document.getElementById("tendersBody");
                             tenders.forEach(tender => {
                                 const date = new Date(tender.createdAt).toLocaleDateString() + " " + new Date(tender.createdAt).toLocaleTimeString();
-                                
-                                // 2. Escape the user-generated title before injecting it into innerHTML
                                 const safeTitle = escapeHTML(tender.title);
                                 
                                 const tr = document.createElement("tr");
@@ -192,7 +190,7 @@
                         throw new Error("Failed to fetch tenders.");
                     }
                 } catch (error) {
-                    document.getElementById("loadingState").innerText = "Error loading data. Please try again.";
+                    document.getElementById("loadingState").innerText = error.message || "Error loading data. Please try again.";
                     document.getElementById("loadingState").style.color = "#dc2626";
                 }
             });
@@ -205,7 +203,7 @@
                 btn.disabled = true;
 
                 try {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/evaluations/${tenderId}`, {
+                    const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/evaluations/${tenderId}`, {
                         method: "GET",
                         headers: {
                             "Authorization": `Bearer ${token}`
@@ -215,13 +213,11 @@
                     if (response.ok) {
                         const evaluations = await response.json();
                         if(evaluations && evaluations.length > 0) {
-                            // Update sessionStorage with the selected tender's data
                             sessionStorage.setItem("meditender_evaluations", JSON.stringify(evaluations));
                             sessionStorage.setItem("meditender_current_id", tenderId);
-                            // Redirect to dashboard
                             window.location.href = "dashboard.html";
                         } else {
-                            alert("No evaluations found for this tender.");
+                            showToast("No evaluations found for this tender.", "warning");
                             btn.innerText = originalText;
                             btn.disabled = false;
                         }
@@ -229,7 +225,7 @@
                         throw new Error("Failed to fetch evaluations.");
                     }
                 } catch (error) {
-                    alert("Error loading dashboard data.");
+                    showToast(error.message || "Error loading dashboard data.", "error");
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }

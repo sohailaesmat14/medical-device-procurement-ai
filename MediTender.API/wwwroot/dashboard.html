@@ -925,13 +925,11 @@
 
             window.overrideDecision = async function (vendorName) {
                 const token = sessionStorage.getItem("jwt_token");
-                let vendor = globalEvaluations.find(
-                    (v) => v.vendorName === vendorName,
-                );
+                let vendor = globalEvaluations.find((v) => v.vendorName === vendorName);
                 if (!vendor) return;
 
                 try {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/override-vendor-decision`, {
+                    const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/override-vendor-decision`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -946,33 +944,25 @@
                     if (!response.ok) throw new Error(await response.text());
 
                     vendor.details.forEach((d) => {
-                        if (
-                            d.isMandatory &&
-                            (d.status === "Partially Met" ||
-                                d.status === "Not Mentioned")
-                        ) {
+                        if (d.isMandatory && (d.status === "Partially Met" || d.status === "Not Mentioned")) {
                             d.status = "Met";
                             d.evidence = "✅ Vendor manually approved by committee.";
                             d.score = 20;
                         }
                     });
 
-                    vendor.totalScore = vendor.details.reduce(
-                        (sum, d) => sum + d.score,
-                        0,
-                    );
+                    vendor.totalScore = vendor.details.reduce((sum, d) => sum + d.score, 0);
                     vendor.finalDecision = "Recommended for Acceptance";
 
-                    sessionStorage.setItem(
-                        "meditender_evaluations",
-                        JSON.stringify(globalEvaluations),
-                    );
+                    sessionStorage.setItem("meditender_evaluations", JSON.stringify(globalEvaluations));
                     generateBIDashboard();
+                    showToast("Vendor fully approved successfully.", "success");
                 } catch (err) {
-                    alert("Failed to approve vendor: " + err.message);
+                    showToast("Failed to approve vendor: " + err.message, "error");
                 }
             };
-            
+
+                        
             function populateVendorFilter() {
                 const vendorSelect = document.getElementById("vendorFilter");
                 globalEvaluations.forEach((ev) => {
@@ -1000,13 +990,11 @@
 
             window.overrideItem = async function (vendorName, reqText) {
                 const token = sessionStorage.getItem("jwt_token");
-                let vendor = globalEvaluations.find(
-                    (v) => v.vendorName === vendorName,
-                );
+                let vendor = globalEvaluations.find((v) => v.vendorName === vendorName);
                 if (!vendor) return;
 
                 try {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/override-evaluation`, {
+                    const response = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/override-evaluation`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -1021,46 +1009,33 @@
 
                     if (!response.ok) throw new Error(await response.text());
 
-                    let detail = vendor.details.find(
-                        (d) => d.requirement === reqText,
-                    );
+                    let detail = vendor.details.find((d) => d.requirement === reqText);
                     if (detail) {
                         detail.status = "Met";
                         detail.evidence = "✅ Manually verified by committee.";
                         detail.score = detail.isMandatory ? 20 : 10;
 
-                        vendor.totalScore = vendor.details.reduce(
-                            (sum, d) => sum + d.score,
-                            0,
-                        );
+                        vendor.totalScore = vendor.details.reduce((sum, d) => sum + d.score, 0);
 
                         let hasFailedMandatory = vendor.details.some(
-                            (d) =>
-                                d.isMandatory &&
-                                (d.status === "Not Met" ||
-                                    d.status === "Error"),
+                            (d) => d.isMandatory && (d.status === "Not Met" || d.status === "Error")
                         );
                         let hasPartialOrMissing = vendor.details.some(
-                            (d) =>
-                                d.isMandatory &&
-                                (d.status === "Partially Met" ||
-                                    d.status === "Not Mentioned"),
+                            (d) => d.isMandatory && (d.status === "Partially Met" || d.status === "Not Mentioned")
                         );
 
                         vendor.finalDecision = hasFailedMandatory
                             ? "Recommended for Rejection"
                             : hasPartialOrMissing
-                              ? "Pending Manual Review"
-                              : "Recommended for Acceptance";
+                            ? "Pending Manual Review"
+                            : "Recommended for Acceptance";
 
-                        sessionStorage.setItem(
-                            "meditender_evaluations",
-                            JSON.stringify(globalEvaluations),
-                        );
+                        sessionStorage.setItem("meditender_evaluations", JSON.stringify(globalEvaluations));
                         generateBIDashboard();
+                        showToast("Requirement approved successfully.", "success");
                     }
                 } catch (err) {
-                    alert("Failed to save override to database: " + err.message);
+                    showToast("Failed to save override to database: " + err.message, "error");
                 }
             };
             
