@@ -68,15 +68,18 @@ namespace MediTender.API.Services
             - ""Description"": string
             - ""RequirementText"": string
             - ""IsMandatory"": boolean
-            
-            Do not include any markdown formatting or json code blocks.
             ";
             
-            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, false, cancellationToken);
-            var cleanedJson = aiResponse.Replace("```json", "").Replace("```", "").Trim();
+            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, true, cancellationToken);
             
             try
             {
+                var startIndex = aiResponse.IndexOf('[');
+                var endIndex = aiResponse.LastIndexOf(']');
+                var cleanedJson = startIndex != -1 && endIndex != -1 
+                    ? aiResponse.Substring(startIndex, endIndex - startIndex + 1)
+                    : aiResponse;
+
                 var extractedDtos = JsonSerializer.Deserialize<List<StandardExtractionDto>>(cleanedJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 
                 var requirements = new List<Standard>();

@@ -93,12 +93,14 @@ namespace MediTender.API.Services
                     if (offer.TotalPrice <= 0)
                     {
                         offer.AiRejectionReason = "Warning: Could not detect a valid total price from the financial document.";
+                        offer.IsAccepted = false; 
                     }
                 }
             }
             catch (Exception ex)
             {
                 offer.AiRejectionReason = $"Error processing financial document: {ex.Message}";
+                offer.IsAccepted = false;
             }
 
             _dbContext.VendorOffers.Add(offer);

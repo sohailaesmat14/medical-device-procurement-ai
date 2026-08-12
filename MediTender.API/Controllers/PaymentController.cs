@@ -79,13 +79,14 @@ namespace MediTender.API.Controllers
                         return Ok();
                     }
 
-                    var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
-                    var amountCents = obj.GetProperty("amount_cents").GetInt32();
+                    var billingData = obj.GetProperty("order").GetProperty("billing_data");
+                    var userEmail = billingData.GetProperty("email").GetString();
+                    var planType = billingData.GetProperty("apartment").GetString();
 
                     var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                     if (user != null)
                     {
-                        if (amountCents == 250000)
+                        if (planType == "monthly")
                         {
                             user.Plan = "monthly";
                             user.QuotaPoints += 2000;
@@ -93,7 +94,7 @@ namespace MediTender.API.Controllers
                                 ? user.SubscriptionExpiresAt.AddDays(30) 
                                 : DateTime.UtcNow.AddDays(30);
                         }
-                        else if (amountCents == 2200000) 
+                        else if (planType == "annually") 
                         {
                             user.Plan = "annually";
                             user.QuotaPoints += 99999;
@@ -110,7 +111,7 @@ namespace MediTender.API.Controllers
                     }
                     else
                     {
-                        // 2. Prevent Silent Money Loss: Log critical alert for orphaned payments
+                        var amountCents = obj.GetProperty("amount_cents").GetInt32();
                         _logger.LogWarning(
                             "CRITICAL: ORPHAN PAYMENT DETECTED! OrderId: {OrderId}, Amount: {AmountCents} cents, Billed Email: {Email}. " +
                             "The payment was successful, but no matching user was found in the database. Manual reconciliation is required.", 

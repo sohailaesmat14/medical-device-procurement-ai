@@ -275,6 +275,19 @@ namespace MediTender.API.Services
 
                     return evaluation;
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to completely evaluate vendor {VendorName}", vendor);
+                    return new OfferEvaluation
+                    {
+                        TenderId = tenderId,
+                        VendorName = vendor,
+                        EvaluationDate = DateTime.UtcNow,
+                        TotalScore = 0,
+                        FinalDecision = "Error",
+                        Details = new List<EvaluationDetail>()
+                    };
+                }
                 finally
                 {
                     semaphore.Release();

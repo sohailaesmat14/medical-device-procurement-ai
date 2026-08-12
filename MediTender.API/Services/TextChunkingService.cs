@@ -11,8 +11,8 @@ namespace MediTender.API.Services
 
         public TextChunkingService(int maxTokensPerChunk = 500, int overlapTokens = 50)
         {
-            _maxTokensPerChunk = maxTokensPerChunk;
-            _overlapTokens = overlapTokens;
+            _maxTokensPerChunk = maxTokensPerChunk <= 0 ? 500 : maxTokensPerChunk;
+            _overlapTokens = overlapTokens >= _maxTokensPerChunk ? _maxTokensPerChunk - 1 : (overlapTokens < 0 ? 0 : overlapTokens);
         }
 
         public List<string> ChunkText(string text)
