@@ -157,7 +157,7 @@ namespace MediTender.API.Controllers
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
 
-            int userId = GetCurrentUserId(); // This is already here
+            int userId = GetCurrentUserId(); 
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
@@ -186,7 +186,6 @@ namespace MediTender.API.Controllers
                 if (!dbRequirements.Any())
                     return BadRequest("No standard requirements found for this tender. Please run the extraction phase first.");
 
-                // 3. Pass 'userId' as the second parameter
                 var results = await comparisonService.CompareVendorsAsync(request.TenderId, userId, dbRequirements, request.VendorNames, cancellationToken);
                 return Ok(results);
             }
@@ -206,7 +205,7 @@ namespace MediTender.API.Controllers
         public class MultiComparisonRequest 
         { 
             public int TenderId { get; set; } = 1; 
-           
+        
             public List<string> VendorNames { get; set; } = new();
         }
 
@@ -221,8 +220,6 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
-            // 1. Consume ONLY the cost of the extraction phase (10 points).
-            // The Comparison phase will naturally handle its own cost in the CompareVendors endpoint.
             int extractionCost = 10;
             var quotaResult = await TryConsumeQuotaAsync(extractionCost);
             if (!quotaResult.Success)
@@ -234,18 +231,15 @@ namespace MediTender.API.Controllers
             {
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId, cancellationToken);
                 
-                // Return successfully without needing to refund anything
                 return Ok(requirements);
             }
             catch (OperationCanceledException)
             {
-                // Only refund the 10 points if the client disconnected or canceled
                 await RefundQuotaAsync(extractionCost);
                 return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
-                // Only refund the 10 points if a server error occurred
                 await RefundQuotaAsync(extractionCost);
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
@@ -256,12 +250,11 @@ namespace MediTender.API.Controllers
         [Authorize(Roles = "Committee")]
         public async Task<IActionResult> ResetSystem(
             [FromServices] Qdrant.Client.QdrantClient qdrantClient,
-            [FromServices] IWebHostEnvironment env) // 1. Inject the Environment service
+            [FromServices] IWebHostEnvironment env) 
         {
-            // 2. Security Check: Strictly limit mass deletion to Development environments ONLY
             if (!env.IsDevelopment())
             {
-                return Forbid(); // Returns 403 Forbidden without exposing system details
+                return Forbid(); 
             }
 
             try
@@ -340,13 +333,13 @@ namespace MediTender.API.Controllers
                 if (user.SubscriptionExpiresAt < DateTime.UtcNow)
                 {
                     await transaction.RollbackAsync();
-                    return (false, user.QuotaPoints, "❌ Your subscription or free trial has expired. Please renew your plan to continue.");
+                    return (false, user.QuotaPoints, "Your subscription or free trial has expired. Please renew your plan to continue.");
                 }
 
                 if (user.QuotaPoints < cost)
                 {
                     await transaction.RollbackAsync();
-                    return (false, user.QuotaPoints, $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points).");
+                    return (false, user.QuotaPoints, $"Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points).");
                 }
 
                 user.QuotaPoints -= cost;
@@ -406,20 +399,20 @@ namespace MediTender.API.Controllers
 
             if (user.SubscriptionExpiresAt < DateTime.UtcNow)
             {
-                return BadRequest(new { Success = false, Message = "❌ Your subscription or free trial has expired. Please renew your plan to continue." });
+                return BadRequest(new { Success = false, Message = "Your subscription or free trial has expired. Please renew your plan to continue." });
             }
 
             if (user.Plan == "free" && request.VendorCount > 2)
             {
-                return BadRequest(new { Success = false, Message = "❌ Free plan limits evaluations to a maximum of 2 vendors per tender. Please upgrade your plan." });
+                return BadRequest(new { Success = false, Message = "Free plan limits evaluations to a maximum of 2 vendors per tender. Please upgrade your plan." });
             }
 
             if (user.QuotaPoints >= cost)
                 return Ok(new { Success = true, RemainingQuota = user.QuotaPoints });
                 
-            return BadRequest(new { Success = false, Message = $"❌ Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
+            return BadRequest(new { Success = false, Message = $"Your current balance ({user.QuotaPoints} points) isn't enough. You need ({cost} points)." });
         }       
-         
+        
         public class QuotaRequest
         {
             public int VendorCount { get; set; }
@@ -446,7 +439,7 @@ namespace MediTender.API.Controllers
                     return NotFound("Requirement not found in this evaluation.");
 
                 detail.Status = "Met";
-                detail.Evidence = $"✅ Manually verified and approved by committee member (ID: {committeeUserId}).";
+                detail.Evidence = $"Manually verified and approved by committee member (ID: {committeeUserId}).";
                 detail.Score = detail.IsMandatory ? 20 : 10;
 
                 evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
@@ -475,7 +468,7 @@ namespace MediTender.API.Controllers
 
                 return Ok(new { Message = "Override saved to database successfully" });
             }
-           catch (Exception ex)
+        catch (Exception ex)
             {
                 _logger.LogError(ex, "Error overriding evaluation for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing the evaluation override." });
@@ -568,9 +561,10 @@ namespace MediTender.API.Controllers
                 _logger.LogError(ex, "Error overriding vendor decision for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing the vendor decision override." });
             }
-        }        
+        }
         
         [HttpPost("override-financial-price")]
+        [Authorize(Roles = "Committee")]
         public async Task<IActionResult> OverrideFinancialPrice([FromBody] FinancialOverrideRequest request)
         {
             int userId = GetCurrentUserId();
