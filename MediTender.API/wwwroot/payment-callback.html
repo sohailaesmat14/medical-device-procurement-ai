@@ -12,31 +12,59 @@
 <body>
     <div class="status-box">
         <h2 id="statusMessage" style="color: #1e293b;">Verifying payment... ⏳</h2>
-        <p style="color: #64748b;">Please wait while we verify your transaction status with the server.</p>
+        <p id="detailMessage" style="color: #64748b;">Please wait while we verify your transaction status with the server.</p>
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             const params = new URLSearchParams(window.location.search);
             const success = params.get("success");
             const statusMessage = document.getElementById("statusMessage");
-            const detailMessage = document.querySelector("p");
+            const detailMessage = document.getElementById("detailMessage");
+            const token = sessionStorage.getItem("jwt_token");
             
-            setTimeout(() => {
-                if (success === "true") {
-                    statusMessage.innerText = "Payment Processed";
-                    statusMessage.style.color = "#10b981";
-                    detailMessage.innerText = "If successful, your quota will be updated shortly. Redirecting...";
+            if (success === "true" && token) {
+                let isVerified = false;
+                let attempts = 0;
+                
+                while (attempts < 5 && !isVerified) {
+                    try {
+                        const res = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                            body: JSON.stringify({ vendorCount: 0 })
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.remainingQuota > 200) {
+                                isVerified = true;
+                                break;
+                            }
+                        }
+                    } catch (e) {}
                     
-                    setTimeout(() => window.location.replace("upload.html"), 3500);
-                } else {
-                    statusMessage.innerText = "Payment Failed or Cancelled ❌";
-                    statusMessage.style.color = "#ef4444";
-                    detailMessage.innerText = "Your transaction could not be completed. Redirecting back...";
-                    
-                    setTimeout(() => window.location.replace("subscription.html"), 3500);
+                    attempts++;
+                    await new Promise(r => setTimeout(r, 2000)); 
                 }
-            }, 1000);
+                
+                if (isVerified) {
+                    statusMessage.innerText = "Payment Verified ✅";
+                    statusMessage.style.color = "#10b981";
+                    detailMessage.innerText = "Your account has been successfully upgraded. Redirecting...";
+                    setTimeout(() => window.location.replace("upload.html"), 2000);
+                } else {
+                    statusMessage.innerText = "Verification Pending ⏳";
+                    statusMessage.style.color = "#f59e0b";
+                    detailMessage.innerText = "We are still processing your payment. Please check your dashboard in a few minutes.";
+                    setTimeout(() => window.location.replace("upload.html"), 4000);
+                }
+            } else {
+                statusMessage.innerText = "Payment Failed or Cancelled ❌";
+                statusMessage.style.color = "#ef4444";
+                detailMessage.innerText = "Your transaction could not be completed. Redirecting back...";
+                setTimeout(() => window.location.replace("subscription.html"), 3500);
+            }
         });
     </script>
 </body>

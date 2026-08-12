@@ -101,35 +101,45 @@ namespace MediTender.API.Controllers
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-            
-            _dbContext.Users.Add(user);
-            await _dbContext.SaveChangesAsync();
 
-            var emailBody = $@"
-            <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
-                <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
-                    <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
-                </div>
-                <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
-                    <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>Verify Your Account</h2>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{user.FullName}</strong>,</p>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Welcome to the future of intelligent tendering. Please use the verification code below to complete your registration:</p>
-                    
-                    <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
-                        <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{verificationCode}</span>
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                _dbContext.Users.Add(user);
+                await _dbContext.SaveChangesAsync();
+
+                var emailBody = $@"
+                <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+                    <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
+                        <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
                     </div>
-                    
-                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 15 minutes.</p>
-                </div>
-                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
-                    <p style='margin: 0;'>&copy; {DateTime.Now.Year} MediTender Smart Assistant. All rights reserved.</p>
-                    <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
-                </div>
-            </div>";
-            
-            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
+                    <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
+                        <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>Verify Your Account</h2>
+                        <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{user.FullName}</strong>,</p>
+                        <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Welcome to the future of intelligent tendering. Please use the verification code below to complete your registration:</p>
+                        
+                        <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
+                            <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{verificationCode}</span>
+                        </div>
+                        
+                        <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 15 minutes.</p>
+                    </div>
+                    <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
+                        <p style='margin: 0;'>&copy; {DateTime.Now.Year} MediTender Smart Assistant. All rights reserved.</p>
+                        <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
+                    </div>
+                </div>";
+                
+                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
+                await transaction.CommitAsync();
 
-            return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+                return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { Message = "Failed to send verification email. Please check your email address and try again." });
+            }
         }
 
         [HttpPost("verify-email")]
@@ -177,16 +187,26 @@ namespace MediTender.API.Controllers
 
             var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             
-            user.ResetPasswordToken = resetCode;
-            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
-            user.FailedVerificationAttempts = 0;
-            
-            await _dbContext.SaveChangesAsync();
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                user.ResetPasswordToken = resetCode;
+                user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+                user.FailedVerificationAttempts = 0;
+                
+                await _dbContext.SaveChangesAsync();
 
-            var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
-            await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
-
-            return Ok(new { Message = "If the email exists, a reset code will be sent." });
+                var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
+                await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
+                
+                await transaction.CommitAsync();
+                return Ok(new { Message = "If the email exists, a reset code will be sent." });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { Message = "An error occurred while sending the email. Please try again later." });
+            }
         }
 
         [HttpPost("reset-password")]
@@ -300,23 +320,26 @@ namespace MediTender.API.Controllers
 
             var newCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             
-            user.VerificationToken = newCode;
-            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
-            user.FailedVerificationAttempts = 0;
-
-            await _dbContext.SaveChangesAsync();
-
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
             try
             {
+                user.VerificationToken = newCode;
+                user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+                user.FailedVerificationAttempts = 0;
+
+                await _dbContext.SaveChangesAsync();
+
                 var emailBody = $"<h3>MediProcure AI</h3><p>Your new verification code is: <strong>{newCode}</strong></p><p>This code expires in 15 minutes.</p>";
                 await _emailService.SendEmailAsync(user.Email, "New Verification Code", emailBody);
+                
+                await transaction.CommitAsync();
+                return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
             }
-            catch (Exception)
+            catch
             {
+                await transaction.RollbackAsync();
                 return StatusCode(500, new { Message = "An error occurred while sending the email. Please try again later." });
             }
-
-            return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
         }
     }
 
