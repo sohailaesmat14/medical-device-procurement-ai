@@ -28,12 +28,11 @@ namespace MediTender.API.Controllers
         [Authorize]
         public async Task<IActionResult> InitiatePayment([FromBody] PaymentRequest request)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value 
-                            ?? request.Email;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {
-                return BadRequest(new { Message = "User email is missing." });
+                return BadRequest(new { Message = "User email is missing from the token." });
             }
 
             if (request.PlanType != "monthly" && request.PlanType != "annually")

@@ -37,14 +37,14 @@ namespace MediTender.API.Controllers
 
             if (user != null)
             {
-                if (!user.IsEmailVerified)
-                    return Unauthorized(new { Message = "Please verify your email before logging in." });
-
                 var passwordHasher = new PasswordHasher<ApplicationUser>();
                 var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
 
                 if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
                 {
+                    if (!user.IsEmailVerified)
+                        return Unauthorized(new { Message = "Invalid email or password, or account is not verified." });
+
                     var token = GenerateJwtToken(user);
                     bool isExpired = user.SubscriptionExpiresAt < DateTime.UtcNow;
                     
@@ -58,7 +58,7 @@ namespace MediTender.API.Controllers
                 }
             }
 
-            return Unauthorized(new { Message = "Invalid email or password" });
+            return Unauthorized(new { Message = "Invalid email or password, or account is not verified." });
         }       
 
         [HttpPost("signup")]
@@ -279,17 +279,6 @@ namespace MediTender.API.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
             
-            return CreateToken(claims);
-        }
-
-        private string GenerateAdminJwtToken(string username, string role)
-        {
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, username),
-                new Claim(ClaimTypes.Role, role),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
             return CreateToken(claims);
         }
         

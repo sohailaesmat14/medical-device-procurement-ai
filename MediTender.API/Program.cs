@@ -107,6 +107,18 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 2
         });
     });
+
+    options.AddPolicy("AIPolicy", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 5
+        });
+    });
 });
 
 var app = builder.Build();

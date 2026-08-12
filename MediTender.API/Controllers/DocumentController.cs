@@ -4,6 +4,7 @@ using MediTender.API.Services;
 using MediTender.API.Data;
 using MediTender.API.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MediTender.API.Controllers
 {
@@ -66,6 +67,11 @@ namespace MediTender.API.Controllers
             if (request.File == null || request.File.Length == 0)
                 return BadRequest("Invalid file.");
 
+            if (request.File.Length > 30 * 1024 * 1024)
+            {
+                return BadRequest("File size exceeds the 30MB limit for PDF processing.");
+            }
+
             if (string.IsNullOrWhiteSpace(request.DocumentType))
                 return BadRequest("Document type is required.");
 
@@ -122,6 +128,7 @@ namespace MediTender.API.Controllers
         }
         
         [HttpPost("ask")]
+        [EnableRateLimiting("AIPolicy")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
         {
             if (string.IsNullOrWhiteSpace(request.Question))
@@ -152,6 +159,7 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("compare-vendors")]
+        [EnableRateLimiting("AIPolicy")]
         public async Task<IActionResult> CompareVendors([FromBody] MultiComparisonRequest request, [FromServices] IComparisonService comparisonService, CancellationToken cancellationToken)
         {
             if (request.VendorNames == null || !request.VendorNames.Any())
@@ -210,6 +218,7 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("extract-standard")]
+        [EnableRateLimiting("AIPolicy")]
         public async Task<IActionResult> ExtractStandardRequirements([FromBody] ExtractStandardRequest request, [FromServices] IStandardExtractionService extractionService, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(request.FileName) || request.TenderId <= 0)
