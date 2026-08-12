@@ -517,6 +517,7 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("override-vendor-decision")]
+        [Authorize(Roles = "Committee")]
         public async Task<IActionResult> OverrideVendorDecision([FromBody] VendorOverrideRequest request)
         {
             int userId = GetCurrentUserId();
@@ -536,7 +537,7 @@ namespace MediTender.API.Controllers
                 foreach (var detail in evaluation.Details.Where(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned")))
                 {
                     detail.Status = "Met";
-                    detail.Evidence = "✅ Vendor manually approved by committee.";
+                    detail.Evidence = "Vendor manually approved by committee.";
                     detail.Score = 20;
                 }
 
@@ -567,7 +568,7 @@ namespace MediTender.API.Controllers
                 _logger.LogError(ex, "Error overriding vendor decision for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing the vendor decision override." });
             }
-        }
+        }        
         
         [HttpPost("override-financial-price")]
         public async Task<IActionResult> OverrideFinancialPrice([FromBody] FinancialOverrideRequest request)
