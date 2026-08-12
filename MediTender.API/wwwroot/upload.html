@@ -443,7 +443,12 @@
                 document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
                 document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
 
-                const addBtn = document.getElementById('addVendorBtn'); 
+                // FIX: this button has no id (see the class-selector fix already used
+                // a few lines below when resetting text back to "Add Vendor to Queue").
+                // Looking it up by a non-existent id here meant the guard `if(addBtn)`
+                // silently skipped the update, so the button text never actually
+                // changed to "Update Vendor" while editing.
+                const addBtn = document.querySelector('.add-btn');
                 if(addBtn) addBtn.innerText = "Update Vendor";
                 
                 editingVendorId = id;

@@ -216,7 +216,13 @@
             });
 
             if (response.ok) {
-                sessionStorage.setItem("verify_email", email);
+                // FIX: verify-email.html reads/writes sessionStorage under the key
+                // "temp_user_email" (used in both its verify and resend-code functions).
+                // This page was previously writing to a different key, "verify_email",
+                // so the email was never actually available on the next page — every
+                // signup attempt hit a false "Session expired. Please sign up again."
+                // error on verify-email.html, even with a correct code.
+                sessionStorage.setItem("temp_user_email", email);
 
                 errorMsg.className = "error-msg";
                 errorMsg.style.backgroundColor = "#d1fae5";
