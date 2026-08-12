@@ -36,7 +36,7 @@ window.togglePasswordVisibility = function(inputId, button) {
     }
 };
 
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
     const token = sessionStorage.getItem("jwt_token");
     const currentPage = window.location.pathname.toLowerCase();
     
@@ -54,28 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !currentPage.includes("home.html")) {
         
-        let remainingQuota = sessionStorage.getItem("meditender_cached_quota");
-
-        if (!remainingQuota) {
-            try {
-                const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ vendorCount: 0 })
-                });
-                
-                if (quotaRes.ok) {
-                    const quotaData = await quotaRes.json();
-                    remainingQuota = quotaData.remainingQuota;
-                    sessionStorage.setItem("meditender_cached_quota", remainingQuota);
-                }
-            } catch (e) {
-                remainingQuota = "...";
-            }
-        }
+        let remainingQuota = sessionStorage.getItem("meditender_cached_quota") || "...";
 
         const existingWidget = document.getElementById("meditender-global-widget");
         if (existingWidget) {
@@ -88,6 +67,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         widgetContainer.style.cssText = `position: fixed; bottom: 20px; right: 20px; display: flex; align-items: center; gap: 10px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif;`;
         
         const quotaBadge = document.createElement("div");
+        quotaBadge.id = "meditender-quota-badge";
         quotaBadge.innerHTML = `<span>Quota: <b>${remainingQuota}</b> Points</span>`;
         quotaBadge.title = "Your current API quota balance";
         quotaBadge.style.cssText = `background-color: #3b82f6; color: white; padding: 10px 16px; border-radius: 50px; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;`;
@@ -101,5 +81,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         widgetContainer.appendChild(quotaBadge);
         widgetContainer.appendChild(logoutBtn);
         document.body.appendChild(widgetContainer);
+
+        fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ vendorCount: 0 })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success || data.remainingQuota !== undefined) {
+                sessionStorage.setItem("meditender_cached_quota", data.remainingQuota);
+                const badge = document.getElementById("meditender-quota-badge");
+                if (badge) {
+                    badge.innerHTML = `<span>Quota: <b>${data.remainingQuota}</b> Points</span>`;
+                }
+            }
+        })
+        .catch(() => {});
     }
 });
