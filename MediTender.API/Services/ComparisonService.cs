@@ -63,12 +63,49 @@ namespace MediTender.API.Services
                 await semaphore.WaitAsync(cancellationToken);
                 try
                 {
+                    return await EvaluateSingleVendorAsync(tenderId, vendor, requirements, reqEmbeddings, cancellationToken);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            var allEvaluations = (await Task.WhenAll(evaluationTasks)).ToList();
+            return allEvaluations;
+        }
+        
+        private async Task<OfferEvaluation> EvaluateSingleVendorAsync(
+            int tenderId, string vendor, List<Standard> requirements, List<float[]> reqEmbeddings, CancellationToken cancellationToken)
+        {
+            try
+            {
                     cancellationToken.ThrowIfCancellationRequested();
                     
                     using var scope = _scopeFactory.CreateScope();
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var financialService = scope.ServiceProvider.GetRequiredService<IFinancialEvaluationService>();
 
+                    var oldEvaluations = await dbContext.OfferEvaluations
+                        .Include(e => e.Details)
+                        .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
+                        .ToListAsync(cancellationToken);
+
+                    if (oldEvaluations.Any())
+                    {
+                        dbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
+                        dbContext.OfferEvaluations.RemoveRange(oldEvaluations);
+                    }
+
+                    var oldFinancialOffers = await dbContext.VendorOffers
+                        .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
+                        .ToListAsync(cancellationToken);
+
+                    if (oldFinancialOffers.Any()) 
+                        dbContext.VendorOffers.RemoveRange(oldFinancialOffers);
+                        
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                        
                     var evaluation = new OfferEvaluation
                     {
                         TenderId = tenderId,
@@ -180,25 +217,15 @@ namespace MediTender.API.Services
                                     if (matchFound)
                                     {
                                         if (aiDetail.TryGetProperty("Score", out var scoreProp) && scoreProp.ValueKind == JsonValueKind.Number)
-                                        {
                                             baseScore = scoreProp.GetInt32();
-                                        }
 
                                         if (aiDetail.TryGetProperty("Status", out var statusProp))
-                                        {
-                                            var rawStatus = statusProp.GetString();
-                                            var validStatuses = new[] { "Met", "Partially Met", "Not Met", "Not Mentioned" };
-                                            status = validStatuses.Contains(rawStatus) ? rawStatus! : "Error";
-                                        }
+                                            status = statusProp.GetString() ?? "Not Met";
                                         else
-                                        {
-                                            status = "Error"; 
-                                        }
+                                            status = "Not Met"; 
 
                                         if (aiDetail.TryGetProperty("Evidence", out var evidenceProp))
-                                        {
                                             evidence = evidenceProp.GetString() ?? "No evidence found.";
-                                        }
                                     }
 
                                     int weight = req.IsMandatory ? 2 : 1; 
@@ -260,81 +287,62 @@ namespace MediTender.API.Services
                     
                     evaluation.TotalPrice = finOffer.TotalPrice; 
 
-                    var oldEvaluations = await dbContext.OfferEvaluations
-                        .Include(e => e.Details)
-                        .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
-                        .ToListAsync(cancellationToken);
-
-                    if (oldEvaluations.Any())
-                    {
-                        dbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
-                        dbContext.OfferEvaluations.RemoveRange(oldEvaluations);
-                    }
-
-                    var oldFinancialOffers = await dbContext.VendorOffers
-                        .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
-                        .ToListAsync(cancellationToken);
-
-                    if (oldFinancialOffers.Any()) 
-                        dbContext.VendorOffers.RemoveRange(oldFinancialOffers);
-
                     dbContext.OfferEvaluations.Add(evaluation);
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     return evaluation;
-                }
-                catch (Exception ex)
+            }
+            catch (OperationCanceledException)
+            {
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Vendor-level evaluation failure for vendor {VendorName} in Tender {TenderId}. Isolating this failure so the rest of the batch can proceed.", vendor, tenderId);
+
+                var errorEvaluation = new OfferEvaluation
                 {
-                    _logger.LogError(ex, "Failed to completely evaluate vendor {VendorName}", vendor);
-                    
-                    var errorEval = new OfferEvaluation
+                    TenderId = tenderId,
+                    VendorName = vendor,
+                    EvaluationDate = DateTime.UtcNow,
+                    TotalScore = 0,
+                    TotalPrice = 0,
+                    FinalDecision = "Error - Manual Review Required",
+                    Details = new List<EvaluationDetail>
                     {
-                        TenderId = tenderId,
-                        VendorName = vendor,
-                        EvaluationDate = DateTime.UtcNow,
-                        TotalScore = 0,
-                        FinalDecision = "Error",
-                        Details = new List<EvaluationDetail>()
-                    };
-
-                    try 
-                    {
-                        using var errorScope = _scopeFactory.CreateScope();
-                        var errorDbContext = errorScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                        
-                        var oldEvaluations = await errorDbContext.OfferEvaluations
-                            .Include(e => e.Details)
-                            .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
-                            .ToListAsync(cancellationToken);
-
-                        if (oldEvaluations.Any())
+                        new EvaluationDetail
                         {
-                            errorDbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
-                            errorDbContext.OfferEvaluations.RemoveRange(oldEvaluations);
+                            Requirement = "System Error",
+                            IsMandatory = true,
+                            Status = "Error",
+                            Evidence = ex.Message,
+                            Score = 0
                         }
-
-                        var oldFinancialOffers = await errorDbContext.VendorOffers
-                            .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
-                            .ToListAsync(cancellationToken);
-
-                        if (oldFinancialOffers.Any()) 
-                            errorDbContext.VendorOffers.RemoveRange(oldFinancialOffers);
-
-                        errorDbContext.OfferEvaluations.Add(errorEval);
-                        await errorDbContext.SaveChangesAsync(cancellationToken);
                     }
-                    catch { }
+                };
 
-                    return errorEval;
-                }
-                finally
+                try
                 {
-                    semaphore.Release();
-                }
-            });
+                    using var errorScope = _scopeFactory.CreateScope();
+                    var errorDbContext = errorScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            var allEvaluations = (await Task.WhenAll(evaluationTasks)).ToList();
-            return allEvaluations;
+                    var stale = await errorDbContext.OfferEvaluations
+                        .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
+                        .ToListAsync(cancellationToken);
+                    if (stale.Any())
+                        errorDbContext.OfferEvaluations.RemoveRange(stale);
+
+                    errorDbContext.OfferEvaluations.Add(errorEvaluation);
+                    await errorDbContext.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception persistEx)
+                {
+                    _logger.LogError(persistEx, "Failed to persist error evaluation for vendor {VendorName} in Tender {TenderId}.", vendor, tenderId);
+                }
+
+                return errorEvaluation;
+            }
         }
     }
 }

@@ -272,18 +272,21 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({ plan: planType, quotaPoints: quotaPoints })
+                        body: JSON.stringify({ email: email, plan: planType, quotaPoints: quotaPoints })
                     });
 
                     if (response.ok) {
-                        const data = await response.json();
-                        sessionStorage.setItem("meditender_plan", planType);
-                        sessionStorage.setItem("meditender_quota", quotaPoints);
-                        alert(data.message || `Selected ${planType.toUpperCase()} Plan successfully! Redirecting to Upload Page...`);
-                        window.location.replace("upload.html"); 
+                        // FIX: This used to claim the Free plan was "selected successfully"
+                        // and cache the requested quotaPoints locally, even though the
+                        // backend intentionally does NOT grant/refresh free quota here
+                        // (that only happens once, at signup, to prevent abuse). Show the
+                        // server's real message instead of an assumed success message.
+                        const data = await response.json().catch(() => ({}));
+                        alert(data.message || "You're on the Free plan. Redirecting...");
+                        sessionStorage.removeItem("meditender_cached_quota");
+                        window.location.replace("upload.html");
                     } else {
-                        const errorData = await response.json();
-                        alert(errorData.message || "Failed to update subscription plan.");
+                        alert("Failed to update subscription plan.");
                         resetButtons();
                     }
                     
@@ -299,10 +302,9 @@
 
                     if (response.ok) {
                         const data = await response.json();
-                        window.location.replace(data.checkoutUrl); 
+                        window.location.replace(data.checkoutUrl); // Used replace() here for consistency
                     } else {
-                        const errorData = await response.json();
-                        alert(errorData.message || "Failed to initiate payment.");
+                        alert("Failed to initiate payment.");
                         resetButtons();
                     }
                 }

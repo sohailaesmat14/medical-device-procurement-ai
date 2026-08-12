@@ -119,6 +119,7 @@
                 color: #64748b;
                 font-weight: bold;
             }
+            /* Progress Bar Styles */
             .progress-wrapper {
                 width: 80%;
                 max-width: 500px;
@@ -144,6 +145,8 @@
                 font-weight: bold;
                 box-sizing: border-box;
             }
+
+            /* Retry Button Styles */
             .retry-btn {
                 margin-top: 25px;
                 padding: 12px 25px;
@@ -168,9 +171,11 @@
         <header>
             <div class="header-left">
                 <div class="user-profile">
-                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="avatar">SE</div>
                     <div class="user-details">
-                        <strong id="userNameDisplay">User Name</strong><br /><small>Biomedical Tendering</small>
+                        <strong>Eng. Suhaila</strong><br /><small
+                            >Biomedical Tendering</small
+                        >
                     </div>
                 </div>
                 <div class="hospital-badge">🏥 Hospital</div>
@@ -228,24 +233,16 @@
                 }
             }
 
-            function escapeHTML(str) {
-                if (!str) return "";
-                return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-            }
-
+            // FIX: Read the current step from session storage, default to 'extract'
             let currentStep = sessionStorage.getItem("meditender_current_step") || "extract"; 
 
             document.addEventListener("DOMContentLoaded", () => {
-                const userName = sessionStorage.getItem("user_name") || "Committee Member";
-                document.getElementById("userNameDisplay").innerText = escapeHTML(userName);
-                const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                document.getElementById("userAvatar").innerText = escapeHTML(initials);
                 
                 async function startProcessing() {
                     const standardFile = sessionStorage.getItem("meditender_standard_file");
                     const vendorsRaw = sessionStorage.getItem("meditender_vendors");
                     const currentTenderId = sessionStorage.getItem("meditender_current_id");
-                    const token = sessionStorage.getItem("jwt_token");
+                    const token = sessionStorage.getItem("jwt_token"); // Added token retrieval here
 
                     const statusText = document.getElementById("processStatus");
                     const progressWrapper = document.getElementById("progressWrapper");
@@ -297,7 +294,7 @@
                                 body: JSON.stringify({
                                     fileName: standardFile,
                                     tenderId: parseInt(currentTenderId),
-                                    vendorCount: vendors.length
+                                    vendorCount: vendors.length // Fix: Passed vendor count for quota reservation
                                 }),
                                 timeout: 300000 
                             });
@@ -307,6 +304,7 @@
 
                             updateProgress(45, "Phase 1 Complete! Standard requirements extracted successfully.");
                             
+                            // FIX: Save state so refresh doesn't repeat Phase 1
                             currentStep = "compare"; 
                             sessionStorage.setItem("meditender_current_step", "compare");
                             
@@ -337,6 +335,7 @@
 
                             updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
                             
+                            // FIX: Clean up the state after full success
                             sessionStorage.removeItem("meditender_current_step");
                             sessionStorage.setItem("meditender_evaluations", JSON.stringify(evaluations));
                             window.onbeforeunload = null;

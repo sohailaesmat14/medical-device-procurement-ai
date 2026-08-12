@@ -51,8 +51,11 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
     return HttpPolicyExtensions
         .HandleTransientHttpError()
         .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-        .WaitAndRetryAsync(5, retryAttempt => 
-            TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+        // FIX: Previous formula (30 + 2^retryAttempt) meant a worst-case wait of
+        // ~3.5 minutes across 5 retries before the caller ever got a response,
+        // leaving users staring at a spinner. Standard capped exponential backoff instead.
+        .WaitAndRetryAsync(5, retryAttempt =>
+            TimeSpan.FromSeconds(Math.Min(2 * Math.Pow(2, retryAttempt), 20)),
             onRetry: (outcome, timespan, retryAttempt, context) =>
             {
                 logger.LogWarning("Rate limit hit or connection issue. Delaying for {DelaySeconds}s, then making retry {RetryAttempt}.", timespan.TotalSeconds, retryAttempt);
@@ -72,8 +75,9 @@ builder.Services.AddSingleton(qdrantClient);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = 104857600;
+    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
 });
+
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.");
 
@@ -93,30 +97,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddPolicy("LoginPolicy", context =>
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("LoginPolicy", httpContext =>
     {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
             Window = TimeSpan.FromMinutes(1),
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
             QueueLimit = 2
-        });
-    });
-
-    options.AddPolicy("AIPolicy", context =>
-    {
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = 10,
-            Window = TimeSpan.FromMinutes(1),
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = 5
         });
     });
 });

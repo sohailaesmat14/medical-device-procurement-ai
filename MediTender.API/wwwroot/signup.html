@@ -6,24 +6,129 @@
     <title>MediProcure AI - Sign Up</title>
     <script src="config.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .signup-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); width: 100%; max-width: 450px; text-align: center; margin: 20px; }
-        .logo { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; text-decoration: none; display: inline-block; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            background-color: #f4f7f9; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+        .signup-container { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); 
+            width: 100%; 
+            max-width: 450px; 
+            text-align: center; 
+            margin: 20px;
+        }
+        .logo { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            color: #111827; 
+            text-decoration: none;
+            display: inline-block;
+        }
         .logo span { color: #10b981; }
-        .avatar-placeholder { width: 80px; height: 80px; background-color: #e2e8f0; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; font-size: 32px; color: #94a3b8; border: 2px dashed #cbd5e1; }
-        .input-group { text-align: left; margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #475569; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: border-color 0.3s; }
-        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus { outline: none; border-color: #2563eb; }
-        .signup-btn { background-color: #2563eb; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        
+        .avatar-placeholder {
+            width: 80px;
+            height: 80px;
+            background-color: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 20px auto;
+            font-size: 32px;
+            color: #94a3b8;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .input-group {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #475569;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="password"] { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        
+        .signup-btn { 
+            background-color: #2563eb; 
+            color: white; 
+            border: none; 
+            width: 100%; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            margin-top: 10px;
+        }
         .signup-btn:hover { background-color: #1d4ed8; }
-        .error-msg { color: #dc2626; font-size: 14px; margin-bottom: 15px; display: none; font-weight: bold; background: #fee2e2; padding: 10px; border-radius: 6px; }
-        .password-container { position: relative; display: flex; align-items: center; }
-        .password-container input { padding-right: 40px; }
-        .toggle-password { position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 18px; color: #64748b; padding: 0; }
-        .login-link { margin-top: 20px; font-size: 14px; color: #64748b; }
-        .login-link a { color: #2563eb; font-weight: bold; text-decoration: none; }
-        .login-link a:hover { text-decoration: underline; }
+        
+        .error-msg { 
+            color: #dc2626; 
+            font-size: 14px; 
+            margin-bottom: 15px; 
+            display: none; 
+            font-weight: bold; 
+            background: #fee2e2;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-container input {
+            padding-right: 40px; /* Space for the toggle icon */
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #64748b;
+            padding: 0;
+        }
+        .login-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        .login-link a {
+            color: #2563eb;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .login-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -52,17 +157,17 @@
             <div class="input-group">
                 <label for="password">Password</label>
                 <div class="password-container">
-                    <input type="password" id="password" placeholder="Min 8 chars (Upper, Lower, Number, Symbol)" required minlength="8" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@$!%*?&]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters">
-                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                
-                </div>
+                    <input type="password" id="password" placeholder="Min 8 chars: upper, lower, number, symbol" required minlength="8"
+                        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}"
+                        title="Must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character (@$!%*?&).">
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('password', this)">👁️</button>                </div>
             </div>
 
             <div class="input-group">
                 <label for="confirmPassword">Confirm Password</label>
                 <div class="password-container">
                     <input type="password" id="confirmPassword" placeholder="Confirm your password" required minlength="8">
-                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>                
-                </div>
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility" title="Show/Hide Password" onclick="togglePasswordVisibility('confirmPassword', this)">👁️</button>                </div>
             </div>
 
             <button type="submit" class="signup-btn">Sign Up & Continue</button>
@@ -81,6 +186,11 @@
         const confirmEl = document.getElementById('confirmPassword');
         const errorMsg = document.getElementById('errorMsg');
         const signupBtn = document.querySelector('.signup-btn');  
+
+        if (!nameEl || !emailEl || !passwordEl || !confirmEl) {
+            console.error("One or more form elements are missing in the HTML.");
+            return;
+        }
 
         const name = nameEl.value.trim();
         const email = emailEl.value.trim();
@@ -106,7 +216,7 @@
             });
 
             if (response.ok) {
-                sessionStorage.setItem("temp_user_email", email);
+                sessionStorage.setItem("verify_email", email);
 
                 errorMsg.className = "error-msg";
                 errorMsg.style.backgroundColor = "#d1fae5";
@@ -151,6 +261,17 @@
             signupBtn.style.opacity = "1";
         }
     }
+
+    function togglePasswordVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            button.innerText = "🙈";
+        } else {
+            input.type = "password";
+            button.innerText = "👁️";
+        }
+    }    
     </script>
 </body>
 </html>

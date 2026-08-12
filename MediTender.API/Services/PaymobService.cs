@@ -22,10 +22,12 @@ namespace MediTender.API.Services
             var integrationId = _configuration["Paymob:IntegrationId"];
             var iframeId = _configuration["Paymob:IframeId"];
 
+            // 1. Authentication Request
             var authPayload = new { api_key = apiKey };
             var authResponse = await PostAsync($"{_baseUrl}/auth/tokens", authPayload);
             var authToken = authResponse.GetProperty("token").GetString();
 
+            // 2. Order Registration Request (Amount in Cents)
             var orderPayload = new
             {
                 auth_token = authToken,
@@ -37,6 +39,7 @@ namespace MediTender.API.Services
             var orderResponse = await PostAsync($"{_baseUrl}/ecommerce/orders", orderPayload);
             var orderId = orderResponse.GetProperty("id").GetInt32();
 
+            // 3. Payment Key Request
             var paymentKeyPayload = new
             {
                 auth_token = authToken,
@@ -45,7 +48,7 @@ namespace MediTender.API.Services
                 order_id = orderId,
                 billing_data = new
                 {
-                    apartment = planType, 
+                    apartment = "NA", 
                     email = userEmail, 
                     floor = "NA", 
                     first_name = userEmail.Split('@')[0],
@@ -65,6 +68,7 @@ namespace MediTender.API.Services
             var paymentKeyResponse = await PostAsync($"{_baseUrl}/acceptance/payment_keys", paymentKeyPayload);
             var paymentToken = paymentKeyResponse.GetProperty("token").GetString();
 
+            // 4. Return Iframe URL
             return $"https://accept.paymob.com/api/acceptance/iframes/{iframeId}?payment_token={paymentToken}";
         }
 

@@ -28,11 +28,12 @@ namespace MediTender.API.Controllers
         [Authorize]
         public async Task<IActionResult> InitiatePayment([FromBody] PaymentRequest request)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value 
+                            ?? request.Email;
 
             if (string.IsNullOrEmpty(userEmail))
             {
-                return BadRequest(new { Message = "User email is missing from the token." });
+                return BadRequest(new { Message = "User email is missing." });
             }
 
             if (request.PlanType != "monthly" && request.PlanType != "annually")
@@ -78,14 +79,13 @@ namespace MediTender.API.Controllers
                         return Ok();
                     }
 
-                    var billingData = obj.GetProperty("order").GetProperty("billing_data");
-                    var userEmail = billingData.GetProperty("email").GetString();
-                    var planType = billingData.GetProperty("apartment").GetString();
+                    var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
+                    var amountCents = obj.GetProperty("amount_cents").GetInt32();
 
                     var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                     if (user != null)
                     {
-                        if (planType == "monthly")
+                        if (amountCents == 250000)
                         {
                             user.Plan = "monthly";
                             user.QuotaPoints += 2000;
@@ -93,7 +93,7 @@ namespace MediTender.API.Controllers
                                 ? user.SubscriptionExpiresAt.AddDays(30) 
                                 : DateTime.UtcNow.AddDays(30);
                         }
-                        else if (planType == "annually") 
+                        else if (amountCents == 2200000) 
                         {
                             user.Plan = "annually";
                             user.QuotaPoints += 99999;
@@ -110,7 +110,7 @@ namespace MediTender.API.Controllers
                     }
                     else
                     {
-                        var amountCents = obj.GetProperty("amount_cents").GetInt32();
+                        // 2. Prevent Silent Money Loss: Log critical alert for orphaned payments
                         _logger.LogWarning(
                             "CRITICAL: ORPHAN PAYMENT DETECTED! OrderId: {OrderId}, Amount: {AmountCents} cents, Billed Email: {Email}. " +
                             "The payment was successful, but no matching user was found in the database. Manual reconciliation is required.", 

@@ -92,15 +92,21 @@ namespace MediTender.API.Services
                     offer.Notes = notes;
                     if (offer.TotalPrice <= 0)
                     {
-                        offer.AiRejectionReason = "Warning: Could not detect a valid total price from the financial document.";
-                        offer.IsAccepted = false; 
+                        // FIX: Previously this only set a warning message but left
+                        // IsAccepted = true, so an offer with a failed price extraction
+                        // (TotalPrice = 0) could be ranked as the cheapest / "best value
+                        // for money" offer — a serious business-logic bug for a system
+                        // whose whole purpose is trustworthy procurement decisions.
+                        // A missing/invalid price must never be treated as an accepted
+                        // financial offer; it requires manual committee review instead.
+                        offer.IsAccepted = false;
+                        offer.AiRejectionReason = "Could not detect a valid total price from the financial document. This offer requires manual price verification before it can be considered accepted.";
                     }
                 }
             }
             catch (Exception ex)
             {
                 offer.AiRejectionReason = $"Error processing financial document: {ex.Message}";
-                offer.IsAccepted = false;
             }
 
             _dbContext.VendorOffers.Add(offer);

@@ -12,7 +12,7 @@
 <body>
     <div class="status-box">
         <h2 id="statusMessage" style="color: #1e293b;">Verifying payment... ⏳</h2>
-        <p id="detailMessage" style="color: #64748b;">Please wait while we verify your transaction status with the server.</p>
+        <p id="statusSubtext" style="color: #64748b;">Please wait while we confirm your transaction with the server.</p>
     </div>
 
     <script>
@@ -20,51 +20,58 @@
             const params = new URLSearchParams(window.location.search);
             const success = params.get("success");
             const statusMessage = document.getElementById("statusMessage");
-            const detailMessage = document.getElementById("detailMessage");
+            const statusSubtext = document.getElementById("statusSubtext");
             const token = sessionStorage.getItem("jwt_token");
-            
-            if (success === "true" && token) {
-                let isVerified = false;
-                let attempts = 0;
-                
-                while (attempts < 5 && !isVerified) {
-                    try {
-                        const res = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                            body: JSON.stringify({ vendorCount: 0 })
-                        });
-                        
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data.remainingQuota > 200) {
-                                isVerified = true;
-                                break;
-                            }
-                        }
-                    } catch (e) {}
-                    
-                    attempts++;
-                    await new Promise(r => setTimeout(r, 2000)); 
-                }
-                
-                if (isVerified) {
-                    statusMessage.innerText = "Payment Verified ✅";
-                    statusMessage.style.color = "#10b981";
-                    detailMessage.innerText = "Your account has been successfully upgraded. Redirecting...";
-                    setTimeout(() => window.location.replace("upload.html"), 2000);
-                } else {
-                    statusMessage.innerText = "Verification Pending ⏳";
-                    statusMessage.style.color = "#f59e0b";
-                    detailMessage.innerText = "We are still processing your payment. Please check your dashboard in a few minutes.";
-                    setTimeout(() => window.location.replace("upload.html"), 4000);
-                }
-            } else {
+
+            function showFailure() {
                 statusMessage.innerText = "Payment Failed or Cancelled ❌";
                 statusMessage.style.color = "#ef4444";
-                detailMessage.innerText = "Your transaction could not be completed. Redirecting back...";
-                setTimeout(() => window.location.replace("subscription.html"), 3500);
+                statusSubtext.innerText = "Redirecting you back to plan selection...";
+                setTimeout(() => window.location.replace("subscription.html"), 2000);
             }
+
+            function showSuccess(plan) {
+                statusMessage.innerText = "Payment Successful! 🎉";
+                statusMessage.style.color = "#10b981";
+                statusSubtext.innerText = "Redirecting to your dashboard...";
+                sessionStorage.setItem("meditender_plan", plan);
+                sessionStorage.removeItem("meditender_cached_quota");
+                setTimeout(() => window.location.replace("upload.html"), 1500);
+            }
+
+            if (success !== "true" || !token) {
+                showFailure();
+                return;
+            }
+
+            // Poll a few times in case the Paymob webhook hasn't finished processing
+            // yet by the time the browser gets redirected back here.
+            const maxAttempts = 6;
+            const delayMs = 1500;
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    const res = await fetch(`${CONFIG.API_BASE_URL}/api/Auth/me`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (res.ok) {
+                        const me = await res.json();
+                        if (me.plan === "monthly" || me.plan === "annually") {
+                            showSuccess(me.plan);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // network hiccup — just retry
+                }
+
+                statusSubtext.innerText = `Confirming with server... (${attempt}/${maxAttempts})`;
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+            statusMessage.innerText = "Still Confirming Your Payment ⏳";
+            statusMessage.style.color = "#f59e0b";
+            statusSubtext.innerText = "This is taking longer than usual. If your payment succeeded, your plan will update shortly — you can also refresh this page.";
         });
     </script>
 </body>

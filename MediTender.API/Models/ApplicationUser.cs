@@ -17,6 +17,5 @@ namespace MediTender.API.Models
         public string VerificationToken { get; set; } = string.Empty;
         public string ResetPasswordToken { get; set; } = string.Empty;
         public DateTime? TokenExpiration { get; set; }
-        public int FailedVerificationAttempts { get; set; } = 0;
     }
 }

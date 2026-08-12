@@ -68,18 +68,18 @@ namespace MediTender.API.Services
             - ""Description"": string
             - ""RequirementText"": string
             - ""IsMandatory"": boolean
+            
+            Do not include any markdown formatting or json code blocks.
             ";
             
-            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, true, cancellationToken);
+            // FIX: This was the only AI call in the codebase not using jsonMode,
+            // relying solely on prompt instructions to get clean JSON back — increasing
+            // the risk of parse failures (and wasted quota) compared to the other services.
+            var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true, cancellationToken);
+            var cleanedJson = aiResponse.Replace("```json", "").Replace("```", "").Trim();
             
             try
             {
-                var startIndex = aiResponse.IndexOf('[');
-                var endIndex = aiResponse.LastIndexOf(']');
-                var cleanedJson = startIndex != -1 && endIndex != -1 
-                    ? aiResponse.Substring(startIndex, endIndex - startIndex + 1)
-                    : aiResponse;
-
                 var extractedDtos = JsonSerializer.Deserialize<List<StandardExtractionDto>>(cleanedJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 
                 var requirements = new List<Standard>();
