@@ -12,7 +12,7 @@
 <body>
     <div class="status-box">
         <h2 id="statusMessage" style="color: #1e293b;">Verifying payment... ⏳</h2>
-        <p style="color: #64748b;">Please wait while we confirm your transaction.</p>
+        <p style="color: #64748b;">Please wait while we verify your transaction status with the server.</p>
     </div>
 
     <script>
@@ -20,21 +20,21 @@
             const params = new URLSearchParams(window.location.search);
             const success = params.get("success");
             const statusMessage = document.getElementById("statusMessage");
+            const detailMessage = document.querySelector("p");
             
             setTimeout(() => {
                 if (success === "true") {
-                    statusMessage.innerText = "Payment Successful! 🎉";
+                    statusMessage.innerText = "Payment Processed";
                     statusMessage.style.color = "#10b981";
+                    detailMessage.innerText = "If successful, your quota will be updated shortly. Redirecting...";
                     
-                    // Optional: Update plan in session storage locally for immediate UI update
-                    sessionStorage.setItem("meditender_plan", "paid");
-                    
-                    setTimeout(() => window.location.replace("upload.html"), 2000);
+                    setTimeout(() => window.location.replace("upload.html"), 3500);
                 } else {
                     statusMessage.innerText = "Payment Failed or Cancelled ❌";
                     statusMessage.style.color = "#ef4444";
+                    detailMessage.innerText = "Your transaction could not be completed. Redirecting back...";
                     
-                    setTimeout(() => window.location.replace("subscription.html"), 2000);
+                    setTimeout(() => window.location.replace("subscription.html"), 3500);
                 }
             }, 1000);
         });

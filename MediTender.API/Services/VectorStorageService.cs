@@ -33,7 +33,6 @@ namespace MediTender.API.Services
                 var currentBatch = chunks.Skip(i).Take(batchSize).ToList();
                 var batchEmbeddings = await _geminiService.GetEmbeddingsBatchAsync(currentBatch);
                 allEmbeddings.AddRange(batchEmbeddings);
-                await Task.Delay(1000); 
             }
 
             var points = new List<PointStruct>();
@@ -68,6 +67,7 @@ namespace MediTender.API.Services
                 await _qdrantClient.UpsertAsync(_collectionName, pointBatch);
             }
         }
+        
         public async Task DeleteExistingDocumentAsync(int tenderId, string documentType, string vendorName)
         {
             var filter = new Filter();

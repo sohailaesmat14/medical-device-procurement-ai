@@ -6,107 +6,28 @@
         <title>MediProcure AI - My Tenders</title>
         <script src="config.js"></script>
         <style>
-            body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                background-color: #f4f7f9;
-                color: #333;
-            }
-            header {
-                background-color: #111827;
-                color: white;
-                padding: 15px 40px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .logo {
-                font-size: 20px;
-                font-weight: bold;
-                text-decoration: none;
-                color: white;
-            }
-            .logo span {
-                color: #10b981;
-            }
-            .main-container {
-                max-width: 1000px;
-                margin: 50px auto;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-                padding: 40px;
-            }
-            h1 {
-                font-size: 28px;
-                margin-top: 0;
-                margin-bottom: 10px;
-                color: #1f2937;
-            }
-            p.subtitle {
-                color: #6b7280;
-                margin-bottom: 30px;
-                font-size: 15px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 20px;
-            }
-            th, td {
-                padding: 15px;
-                text-align: left;
-                border-bottom: 1px solid #e2e8f0;
-            }
-            th {
-                background-color: #f8fafc;
-                color: #475569;
-                font-weight: bold;
-            }
-            tr:hover {
-                background-color: #f1f5f9;
-            }
-            .btn-view {
-                background-color: #2563eb;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: 0.3s;
-            }
-            .btn-view:hover {
-                background-color: #1d4ed8;
-            }
-            .btn-new {
-                background-color: #10b981;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                text-decoration: none;
-                float: right;
-            }
-            .btn-new:hover {
-                background-color: #059669;
-            }
-            .loading {
-                text-align: center;
-                padding: 40px;
-                color: #64748b;
-                font-weight: bold;
-            }
+            body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f9; color: #333; }
+            header { background-color: #111827; color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
+            .logo { font-size: 20px; font-weight: bold; text-decoration: none; color: white; }
+            .logo span { color: #10b981; }
+            .main-container { max-width: 1000px; margin: 50px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); padding: 40px; }
+            h1 { font-size: 28px; margin-top: 0; margin-bottom: 10px; color: #1f2937; }
+            p.subtitle { color: #6b7280; margin-bottom: 30px; font-size: 15px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            th { background-color: #f8fafc; color: #475569; font-weight: bold; }
+            tr:hover { background-color: #f1f5f9; }
+            .btn-view { background-color: #2563eb; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+            .btn-view:hover { background-color: #1d4ed8; }
+            .btn-new { background-color: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; text-decoration: none; float: right; }
+            .btn-new:hover { background-color: #059669; }
+            .loading { text-align: center; padding: 40px; color: #64748b; font-weight: bold; }
         </style>
     </head>
     <body>
         <header>
             <a href="home.html" class="logo">MediProcure <span>AI</span></a>
-            <div>
-                <a href="upload.html" class="btn-new">➕ New Evaluation</a>
-            </div>
+            <div><a href="upload.html" class="btn-new">➕ New Evaluation</a></div>
         </header>
 
         <div class="main-container">
@@ -116,34 +37,17 @@
             <div id="tableContainer">
                 <div class="loading" id="loadingState">Loading your tenders...</div>
                 <table id="tendersTable" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tender Title</th>
-                            <th>Date Created</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tendersBody">
-                        <!-- Rows will be injected here -->
-                    </tbody>
+                    <thead><tr><th>ID</th><th>Tender Title</th><th>Date Created</th><th>Action</th></tr></thead>
+                    <tbody id="tendersBody"></tbody>
                 </table>
-                <div id="emptyState" class="loading" style="display: none; color: #ef4444;">
-                    No tenders found. Start by creating a new evaluation.
-                </div>
+                <div id="emptyState" class="loading" style="display: none; color: #ef4444;">No tenders found. Start by creating a new evaluation.</div>
             </div>
         </div>
 
         <script>
             function escapeHTML(str) {
                 if (!str) return "";
-                return str
-                    .toString()
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#39;");
+                return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
             }
 
             document.addEventListener("DOMContentLoaded", async () => {
@@ -156,9 +60,7 @@
                 try {
                     const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/my-tenders`, {
                         method: "GET",
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
+                        headers: { "Authorization": `Bearer ${token}` }
                     });
 
                     if (response.ok) {
@@ -171,8 +73,6 @@
                             const tbody = document.getElementById("tendersBody");
                             tenders.forEach(tender => {
                                 const date = new Date(tender.createdAt).toLocaleDateString() + " " + new Date(tender.createdAt).toLocaleTimeString();
-                                
-                                // 2. Escape the user-generated title before injecting it into innerHTML
                                 const safeTitle = escapeHTML(tender.title);
                                 
                                 const tr = document.createElement("tr");
@@ -180,9 +80,7 @@
                                     <td><strong>#${tender.id}</strong></td>
                                     <td>${safeTitle}</td>
                                     <td>${date}</td>
-                                    <td>
-                                        <button class="btn-view" onclick="loadTenderDashboard(${tender.id})">📊 View Matrix</button>
-                                    </td>
+                                    <td><button class="btn-view" onclick="loadTenderDashboard(${tender.id})">📊 View Matrix</button></td>
                                 `;
                                 tbody.appendChild(tr);
                             });
@@ -197,53 +95,6 @@
                 }
             });
             
-            document.addEventListener("DOMContentLoaded", async () => {
-                const token = sessionStorage.getItem("jwt_token");
-                if (!token) {
-                    window.location.replace("login.html");
-                    return;
-                }
-
-                try {
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/my-tenders`, {
-                        method: "GET",
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
-                    });
-
-                    if (response.ok) {
-                        const tenders = await response.json();
-                        document.getElementById("loadingState").style.display = "none";
-
-                        if (tenders.length === 0) {
-                            document.getElementById("emptyState").style.display = "block";
-                        } else {
-                            const tbody = document.getElementById("tendersBody");
-                            tenders.forEach(tender => {
-                                const date = new Date(tender.createdAt).toLocaleDateString() + " " + new Date(tender.createdAt).toLocaleTimeString();
-                                const tr = document.createElement("tr");
-                                tr.innerHTML = `
-                                    <td><strong>#${tender.id}</strong></td>
-                                    <td>${tender.title}</td>
-                                    <td>${date}</td>
-                                    <td>
-                                        <button class="btn-view" onclick="loadTenderDashboard(${tender.id})">📊 View Matrix</button>
-                                    </td>
-                                `;
-                                tbody.appendChild(tr);
-                            });
-                            document.getElementById("tendersTable").style.display = "table";
-                        }
-                    } else {
-                        throw new Error("Failed to fetch tenders.");
-                    }
-                } catch (error) {
-                    document.getElementById("loadingState").innerText = "Error loading data. Please try again.";
-                    document.getElementById("loadingState").style.color = "#dc2626";
-                }
-            });
-
             async function loadTenderDashboard(tenderId) {
                 const token = sessionStorage.getItem("jwt_token");
                 const btn = event.target;
@@ -254,18 +105,14 @@
                 try {
                     const response = await fetch(`${CONFIG.API_BASE_URL}/api/Document/evaluations/${tenderId}`, {
                         method: "GET",
-                        headers: {
-                            "Authorization": `Bearer ${token}`
-                        }
+                        headers: { "Authorization": `Bearer ${token}` }
                     });
 
                     if (response.ok) {
                         const evaluations = await response.json();
                         if(evaluations && evaluations.length > 0) {
-                            // Update sessionStorage with the selected tender's data
                             sessionStorage.setItem("meditender_evaluations", JSON.stringify(evaluations));
                             sessionStorage.setItem("meditender_current_id", tenderId);
-                            // Redirect to dashboard
                             window.location.href = "dashboard.html";
                         } else {
                             alert("No evaluations found for this tender.");

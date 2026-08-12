@@ -29,30 +29,6 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
-        [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicy")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
-
-            if (user != null)
-            {
-                if (!user.IsEmailVerified)
-                    return Unauthorized(new { Message = "Please verify your email before logging in." });
-
-                var passwordHasher = new PasswordHasher<ApplicationUser>();
-                var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-
-                if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
-                {
-                    var token = GenerateJwtToken(user);
-                    return Ok(new { Token = token, Message = "Login Successful", Plan = user.Plan, FullName = user.FullName });
-                }
-            }
-
-            return Unauthorized(new { Message = "Invalid email or password" });
-        }       
-
         [HttpPost("signup")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
@@ -258,8 +234,50 @@ namespace MediTender.API.Controllers
 
             return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
         }
-    }
+        [HttpPost("login")]
+        [EnableRateLimiting("LoginPolicy")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
+            if (user != null)
+            {
+                if (!user.IsEmailVerified)
+                    return Unauthorized(new { Message = "Please verify your email before logging in." });
+
+                var passwordHasher = new PasswordHasher<ApplicationUser>();
+                var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+                if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+                {
+                    var token = GenerateJwtToken(user);
+                    bool isExpired = user.SubscriptionExpiresAt < DateTime.UtcNow;
+                    
+                    return Ok(new { 
+                        Token = token, 
+                        Message = "Login Successful", 
+                        Plan = user.Plan, 
+                        FullName = user.FullName,
+                        IsExpired = isExpired
+                    });
+                }
+            }
+
+            return Unauthorized(new { Message = "Invalid email or password" });
+        }
+
+    }
+    
+    public class LoginRequest
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; } = string.Empty;
+    }
     public class ResendVerificationRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
@@ -296,17 +314,6 @@ namespace MediTender.API.Controllers
     public class ForgotPasswordRequest
     {
         [Required, EmailAddress] public string Email { get; set; } = string.Empty;
-    }
-
-    public class LoginRequest
-    {
-        [Required]
-        [EmailAddress]
-        public string Username { get; set; } = string.Empty;
-
-        [Required]
-        [MinLength(6)]
-        public string Password { get; set; } = string.Empty;
     }
     public class UpdatePlanRequest
     {

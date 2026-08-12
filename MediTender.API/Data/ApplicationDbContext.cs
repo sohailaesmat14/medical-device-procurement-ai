@@ -40,6 +40,7 @@ namespace MediTender.API.Data
 
             modelBuilder.Entity<OfferEvaluation>()
                 .HasIndex(e => new { e.TenderId, e.VendorName })
+                .IsUnique()
                 .HasDatabaseName("IX_OfferEvaluations_TenderId_VendorName");
         }
     }

@@ -52,7 +52,7 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
         .HandleTransientHttpError()
         .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
         .WaitAndRetryAsync(5, retryAttempt => 
-            TimeSpan.FromSeconds(30 + Math.Pow(2, retryAttempt)),
+            TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
             onRetry: (outcome, timespan, retryAttempt, context) =>
             {
                 logger.LogWarning("Rate limit hit or connection issue. Delaying for {DelaySeconds}s, then making retry {RetryAttempt}.", timespan.TotalSeconds, retryAttempt);
@@ -144,4 +144,4 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
-app.Run();  
+app.Run();

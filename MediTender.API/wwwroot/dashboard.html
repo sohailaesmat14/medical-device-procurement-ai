@@ -35,7 +35,6 @@
                 padding: 0 20px;
             }
 
-            /* Executive Summary & Badges */
             .summary-card {
                 background: linear-gradient(135deg, #1e293b, #334155);
                 color: white;
@@ -53,7 +52,6 @@
                 line-height: 1.6;
             }
 
-            /* BI Insights Grid */
             .insights-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -93,7 +91,6 @@
                 border-top-color: #10b981;
             }
 
-            /* Matrix Table */
             .matrix-container {
                 background: white;
                 padding: 25px;
@@ -331,7 +328,6 @@
             </div>
         </div>
         <div class="container" id="dashboardContent">
-            <!-- Data will be injected here by JS -->
         </div>
 
         <script>
@@ -362,6 +358,17 @@
                     .replace(/\r/g, "\\r");
             }
 
+            function isCommittee() {
+                const token = sessionStorage.getItem("jwt_token");
+                if (!token) return false;
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    return payload.role === "Committee" || payload.Role === "Committee";
+                } catch (e) {
+                    return false;
+                }
+            }
+
             document.addEventListener("DOMContentLoaded", () => {
                 const rawData = sessionStorage.getItem(
                     "meditender_evaluations",
@@ -386,7 +393,6 @@
             function generateBIDashboard() {
                 const content = document.getElementById("dashboardContent");
 
-                // --- 1. Data Preparation ---
                 const reqMap = {};
                 globalEvaluations[0].details.forEach((d) => {
                     reqMap[d.requirement] = {
@@ -414,8 +420,6 @@
                     });
                 });
 
-                // --- 2. BI Calculations ---
-                // A. Value for Money (Best Price for Accepted ONLY)
                 let fullyAccepted = acceptedVendors.filter(
                     (v) => v.finalDecision === "Recommended for Acceptance",
                 );
@@ -430,11 +434,11 @@
                         : 0;
                 const outlierThreshold = avgPrice * 0.6;
 
-                // B. Gap Analysis & Review Flags & Evidence Coverage
                 let gapCount = 0;
                 let reviewFlagsCount = 0;
                 let evidenceFound = 0;
                 let totalMandatory = 0;
+                const isUserCommittee = isCommittee();
 
                 Object.values(reqMap).forEach((req) => {
                     let allFailed = true;
@@ -474,7 +478,6 @@
                           )
                         : 0;
 
-                // --- 3. Executive Narrative ---
                 let narrative = `Based on the AI evaluation of ${globalEvaluations.length} vendors, `;
                 if (fullyAccepted.length > 0) {
                     narrative += `<strong>${fullyAccepted.length} vendors</strong> are currently recommended for acceptance. `;
@@ -486,7 +489,6 @@
                     narrative += `Warning: There are ${gapCount} specific requirements where ALL vendors failed or missed data.`;
                 }
 
-                // --- 4. Render HTML ---
                 let html = `
                 <div class="summary-card">
                     <h2> AI Executive Summary</h2>
@@ -515,6 +517,7 @@
                         <div class="insight-desc">Percentage of mandatory items with explicit text evidence.</div>
                     </div>
                 </div>
+                
                 <div class="charts-container" style="display: flex; flex-wrap: wrap; gap: 20px; margin: 20px auto; width: 95%;">
                     <div style="flex: 1; min-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <h3 style="text-align: center; color: #334155;">Total Technical Score</h3>
@@ -575,8 +578,7 @@
                                                 : "";
 
                                         let actionBtn =
-                                            ev.finalDecision ===
-                                            "Pending Manual Review"
+                                            (ev.finalDecision === "Pending Manual Review" && isUserCommittee)
                                                 ? `<button onclick="triggerVendorOverrideModal('${escapeForJS(ev.vendorName)}')" style="margin-top:8px; background:#2563eb; color:white; border:none; border-radius:4px; padding:6px 10px; cursor:pointer; font-size:12px; width:100%; font-weight:bold;">✅ Manual Override</button>`
                                                 : "";
                                         let statusColor =
@@ -652,11 +654,11 @@
                                             <br><small style="color:#64748b;">Score: ${res.score}/${maxScore}</small>
                                             
                                             ${
-                                                req.isMandatory &&
+                                                (req.isMandatory &&
                                                 (res.status ===
                                                     "Partially Met" ||
                                                     res.status ===
-                                                        "Not Mentioned")
+                                                        "Not Mentioned") && isUserCommittee)
                                                     ? `<button onclick="overrideItem('${escapeForJS(ev.vendorName)}', '${escapeForJS(req.text)}')" 
                                                 style="margin-top: 5px; display: block; background: #3b82f6; color: white; border: none; border-radius: 3px; font-size: 10px; padding: 3px 6px; cursor: pointer;">
                                                 ✓ Approve Item
@@ -674,13 +676,12 @@
                 </div>
             `;
                 content.innerHTML = html;
-                // Function to render the Total Score Bar Chart
+
                 function renderTotalScoreChart() {
                     const ctx = document
                         .getElementById("totalScoreChart")
                         .getContext("2d");
 
-                    // Extract labels (Vendor Names) and data (Total Scores) from globalEvaluations
                     const vendorNames = globalEvaluations.map(
                         (ev) => ev.vendorName,
                     );
@@ -688,13 +689,12 @@
                         (ev) => ev.totalScore,
                     );
 
-                    // Define dynamic colors based on the final decision
                     const barColors = globalEvaluations.map((ev) => {
                         if (ev.finalDecision === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.7)"; // Green
+                            return "rgba(16, 185, 129, 0.7)"; 
                         if (ev.finalDecision === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.7)"; // Yellow/Orange
-                        return "rgba(239, 68, 68, 0.7)"; // Red
+                            return "rgba(245, 158, 11, 0.7)"; 
+                        return "rgba(239, 68, 68, 0.7)"; 
                     });
 
                     const borderColors = barColors.map((color) =>
@@ -728,14 +728,13 @@
                             },
                             plugins: {
                                 legend: {
-                                    display: false, // Hide legend since we only have one dataset
+                                    display: false, 
                                 },
                             },
                         },
                     });
                 }
 
-                // Function to render the Stacked Bar Chart for Status Distribution
                 function renderStatusDistributionChart() {
                     const ctx = document
                         .getElementById("statusDistributionChart")
@@ -830,7 +829,6 @@
                         .getElementById("valueForMoneyChart")
                         .getContext("2d");
 
-                    // Filter out vendors that do not have a financial offer yet (Price = 0 or N/A)
                     const scatterData = globalEvaluations
                         .filter((ev) => ev.totalPrice > 0)
                         .map((ev) => ({
@@ -842,13 +840,12 @@
 
                     if (scatterData.length === 0) return;
 
-                    // Assign colors based on the technical evaluation status
                     const pointColors = scatterData.map((d) => {
                         if (d.status === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.8)"; // Green
+                            return "rgba(16, 185, 129, 0.8)"; 
                         if (d.status === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.8)"; // Yellow
-                        return "rgba(239, 68, 68, 0.8)"; // Red
+                            return "rgba(245, 158, 11, 0.8)"; 
+                        return "rgba(239, 68, 68, 0.8)"; 
                     });
 
                     new Chart(ctx, {
@@ -986,7 +983,7 @@
             window.triggerOverrideModal = function (vendorName, reqText) {
                 const modal = document.getElementById("confirmModal");
                 document.getElementById("confirmModalText").innerHTML =
-                    `Are you sure you want to manually approve the requirement:<br><br><strong>"${reqText}"</strong><br><br>for vendor <strong>${vendorName}</strong>? <br><br><small style="color:red;">This action will be permanently saved.</small>`;
+                    `Are you sure you want to manually approve the requirement:<br><br><strong>"${escapeHTML(reqText)}"</strong><br><br>for vendor <strong>${escapeHTML(vendorName)}</strong>? <br><br><small style="color:red;">This action will be permanently saved.</small>`;
 
                 const confirmBtn = document.getElementById("confirmModalBtn");
 

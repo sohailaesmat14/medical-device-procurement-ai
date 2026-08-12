@@ -71,7 +71,6 @@ namespace MediTender.API.Services
                 new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
             );
 
-
             cancellationToken.ThrowIfCancellationRequested();
 
             var response = await _httpClient.PostAsync(url, content, cancellationToken);
@@ -99,6 +98,7 @@ namespace MediTender.API.Services
             using var doc = JsonDocument.Parse(responseString);
             return doc.RootElement.GetProperty("embedding").GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray();
         }
+
         public async Task<List<float[]>> GetEmbeddingsBatchAsync(List<string> texts, CancellationToken cancellationToken = default)
         {
             var allEmbeddings = new List<float[]>();
@@ -130,8 +130,6 @@ namespace MediTender.API.Services
                 {
                     allEmbeddings.Add(embedding.GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray());
                 }
-
-                await Task.Delay(2000, cancellationToken); 
             }
 
             return allEmbeddings;

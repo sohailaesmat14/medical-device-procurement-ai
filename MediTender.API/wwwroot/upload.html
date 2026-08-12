@@ -6,285 +6,47 @@
         <title>MediProcure AI - Upload Documents</title>
         <script src="config.js"></script>
         <style>
-            body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                background-color: #f4f7f9;
-                color: #333;
-            }
-            header {
-                background-color: #111827;
-                color: white;
-                padding: 15px 40px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            .user-profile {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .avatar {
-                background-color: #0ea5e9;
-                color: white;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-weight: bold;
-            }
-            .user-details {
-                line-height: 1.2;
-            }
-            .user-details strong {
-                font-size: 14px;
-            }
-            .user-details small {
-                font-size: 12px;
-                color: #9ca3af;
-            }
-            .hospital-badge {
-                background-color: #374151;
-                padding: 8px 15px;
-                border-radius: 20px;
-                font-size: 14px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .logo {
-                font-size: 20px;
-                font-weight: bold;
-            }
-            .logo span {
-                color: #10b981;
-            }
-
-            .main-container {
-                max-width: 900px;
-                margin: 50px auto;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-                padding: 50px;
-                text-align: center;
-            }
-            .badge-version {
-                background-color: #e0f2fe;
-                color: #0284c7;
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: bold;
-                display: inline-block;
-                margin-bottom: 20px;
-            }
-            h1 {
-                font-size: 28px;
-                margin-bottom: 10px;
-                color: #1f2937;
-            }
-            p.subtitle {
-                color: #6b7280;
-                margin-bottom: 40px;
-                font-size: 15px;
-                line-height: 1.6;
-            }
-
-            .upload-cards-wrapper {
-                display: flex;
-                gap: 30px;
-                margin-bottom: 40px;
-                text-align: left;
-            }
-            .upload-card {
-                flex: 1;
-                border: 2px dashed #cbd5e1;
-                border-radius: 12px;
-                padding: 30px;
-                background-color: #fdfdfd;
-            }
-            .upload-card h3 {
-                margin: 0 0 15px 0;
-                font-size: 18px;
-                color: #1e293b;
-                text-align: center;
-            }
-
-            input[type="file"],
-            input[type="text"] {
-                width: 100%;
-                padding: 10px;
-                margin-bottom: 10px;
-                border: 1px solid #ccc;
-                border-radius: 6px;
-                box-sizing: border-box;
-            }
-            .add-btn {
-                background-color: #10b981;
-                color: white;
-                border: none;
-                padding: 10px;
-                border-radius: 6px;
-                cursor: pointer;
-                width: 100%;
-                font-weight: bold;
-                margin-bottom: 15px;
-            }
-            .add-btn:hover {
-                background-color: #059669;
-            }
-
-            .vendor-list {
-                font-size: 14px;
-                background: #f1f5f9;
-                padding: 10px;
-                border-radius: 6px;
-                min-height: 50px;
-            }
-            .vendor-item {
-                padding: 8px 0;
-                border-bottom: 1px solid #e2e8f0;
-                font-size: 13px;
-            }
-
-            .start-btn {
-                background-color: #2563eb;
-                color: white;
-                border: none;
-                width: 100%;
-                padding: 18px;
-                border-radius: 8px;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: background-color 0.3s;
-            }
-            .start-btn:hover {
-                background-color: #1d4ed8;
-            }
-            .start-btn:disabled {
-                background-color: #94a3b8;
-                cursor: not-allowed;
-            }
-
-            #statusMessage {
-                margin-top: 15px;
-                font-weight: bold;
-                color: #ef4444;
-                display: none;
-            }
-
-            /* Progress Bar Styles */
-            .progress-container {
-                display: none;
-                margin-top: 25px;
-                text-align: left;
-            }
-            .progress-info {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-            }
-            .progress-text {
-                font-weight: bold;
-                color: #2563eb;
-                font-size: 16px;
-            }
-            .progress-step {
-                color: #6b7280;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            .progress-bar-bg {
-                width: 100%;
-                background-color: #e2e8f0;
-                border-radius: 8px;
-                overflow: hidden;
-                height: 22px;
-            }
-            .progress-bar-fill {
-                width: 0%;
-                height: 100%;
-                background-color: #2563eb;
-                transition:
-                    width 0.4s ease,
-                    background-color 0.4s ease;
-            }
-            .modal-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(17, 24, 39, 0.7);
-                z-index: 1000;
-                justify-content: center;
-                align-items: center;
-                backdrop-filter: blur(4px);
-            }
-            .modal-content {
-                background: white;
-                padding: 30px;
-                border-radius: 12px;
-                max-width: 450px;
-                width: 90%;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            }
-            .modal-title {
-                margin-top: 0;
-                color: #1e293b;
-                font-size: 22px;
-                margin-bottom: 10px;
-            }
-            .modal-message {
-                color: #475569;
-                margin-bottom: 25px;
-                line-height: 1.6;
-                font-size: 15px;
-                white-space: pre-line;
-            }
-            .modal-actions {
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-            }
-            .btn-cancel {
-                background: #e2e8f0;
-                color: #475569;
-                border: none;
-                padding: 10px 25px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: 0.2s;
-            }
-            .btn-cancel:hover {
-                background: #cbd5e1;
-            }
-            .btn-confirm {
-                background: #10b981;
-                color: white;
-                border: none;
-                padding: 10px 25px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: 0.2s;
-            }
-            .btn-confirm:hover {
-                background: #059669;
-            }
+            body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f9; color: #333; }
+            header { background-color: #111827; color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
+            .header-left { display: flex; align-items: center; gap: 20px; }
+            .user-profile { display: flex; align-items: center; gap: 10px; }
+            .avatar { background-color: #0ea5e9; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+            .user-details { line-height: 1.2; }
+            .user-details strong { font-size: 14px; }
+            .user-details small { font-size: 12px; color: #9ca3af; }
+            .logo { font-size: 20px; font-weight: bold; }
+            .logo span { color: #10b981; }
+            .main-container { max-width: 900px; margin: 50px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); padding: 50px; text-align: center; }
+            .badge-version { background-color: #e0f2fe; color: #0284c7; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+            h1 { font-size: 28px; margin-bottom: 10px; color: #1f2937; }
+            p.subtitle { color: #6b7280; margin-bottom: 40px; font-size: 15px; line-height: 1.6; }
+            .upload-cards-wrapper { display: flex; gap: 30px; margin-bottom: 40px; text-align: left; }
+            .upload-card { flex: 1; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 30px; background-color: #fdfdfd; }
+            .upload-card h3 { margin: 0 0 15px 0; font-size: 18px; color: #1e293b; text-align: center; }
+            input[type="file"], input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+            .add-btn { background-color: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 15px; }
+            .add-btn:hover { background-color: #059669; }
+            .vendor-list { font-size: 14px; background: #f1f5f9; padding: 10px; border-radius: 6px; min-height: 50px; }
+            .vendor-item { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            .start-btn { background-color: #2563eb; color: white; border: none; width: 100%; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background-color 0.3s; }
+            .start-btn:hover { background-color: #1d4ed8; }
+            .start-btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
+            #statusMessage { margin-top: 15px; font-weight: bold; color: #ef4444; display: none; }
+            .progress-container { display: none; margin-top: 25px; text-align: left; }
+            .progress-info { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .progress-text { font-weight: bold; color: #2563eb; font-size: 16px; }
+            .progress-step { color: #6b7280; font-size: 14px; font-weight: bold; }
+            .progress-bar-bg { width: 100%; background-color: #e2e8f0; border-radius: 8px; overflow: hidden; height: 22px; }
+            .progress-bar-fill { width: 0%; height: 100%; background-color: #2563eb; transition: width 0.4s ease, background-color 0.4s ease; }
+            .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+            .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+            .modal-title { margin-top: 0; color: #1e293b; font-size: 22px; margin-bottom: 10px; }
+            .modal-message { color: #475569; margin-bottom: 25px; line-height: 1.6; font-size: 15px; white-space: pre-line; }
+            .modal-actions { display: flex; justify-content: center; gap: 15px; }
+            .btn-cancel { background: #e2e8f0; color: #475569; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+            .btn-cancel:hover { background: #cbd5e1; }
+            .btn-confirm { background: #10b981; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+            .btn-confirm:hover { background: #059669; }
         </style>
     </head>
     <body>
@@ -314,58 +76,32 @@
                 <div class="upload-card">
                     <h3>📑 1. Standard Specifications</h3>
                     <label>Select Tender Standard PDF:</label>
-                    <input
-                        type="file"
-                        id="standardFile"
-                        accept="application/pdf"
-                    />
+                    <input type="file" id="standardFile" accept="application/pdf" />
                 </div>
 
                 <div class="upload-card">
                     <h3>📄 2. Vendor Offers</h3>
                     <label>Vendor Name:</label>
-                    <input
-                        type="text"
-                        id="vendorName"
-                        placeholder="e.g., NovaCare"
-                    />
+                    <input type="text" id="vendorName" placeholder="e.g., NovaCare" />
 
                     <label>Technical Offer PDF :</label>
-                    <input
-                        type="file"
-                        id="vendorTechFile"
-                        accept="application/pdf"
-                    />
+                    <input type="file" id="vendorTechFile" accept="application/pdf" />
                     <span id="techFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
 
                     <label>Financial Offer PDF:</label>
-                    <input
-                        type="file"
-                        id="vendorFinFile"
-                        accept="application/pdf"
-                    />
-
+                    <input type="file" id="vendorFinFile" accept="application/pdf" />
                     <span id="finFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
 
-                    <button class="add-btn" onclick="addVendor()">
-                        Add Vendor to Queue
-                    </button>
-                    <div class="vendor-list" id="vendorList">
-                        No vendors added yet.
-                    </div>
+                    <button class="add-btn" onclick="addVendor()">Add Vendor to Queue</button>
+                    <div class="vendor-list" id="vendorList">No vendors added yet.</div>
                 </div>
             </div>
 
-            <button class="start-btn" id="startBtn" onclick="processUploads()">
-                Start Upload & Analysis 🚀
-            </button>
+            <button class="start-btn" id="startBtn" onclick="processUploads()">Start Upload & Analysis 🚀</button>
 
-            <!-- Progress Bar HTML -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-info">
-                    <span class="progress-step" id="progressStep"
-                        >Starting upload process...</span
-                    >
+                    <span class="progress-step" id="progressStep">Starting upload process...</span>
                     <span class="progress-text" id="progressText">0%</span>
                 </div>
                 <div class="progress-bar-bg">
@@ -376,9 +112,22 @@
             <div id="statusMessage"></div>
         </div>
 
+        <div class="modal-overlay" id="customModal">
+            <div class="modal-content">
+                <h3 class="modal-title" id="modalTitle">Notification</h3>
+                <div class="modal-message" id="modalMessage"></div>
+                <div class="modal-actions" id="modalActions"></div>
+            </div>
+        </div>
+
         <script>
             if (!sessionStorage.getItem("jwt_token")) {
                 window.location.replace("login.html");
+            }
+
+            function escapeHTML(str) {
+                if (!str) return "";
+                return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
             }
 
             let vendorQueue = [];
@@ -392,11 +141,11 @@
                     return confirmationMessage;
                 }
             });
+
             function showCustomModal(title, message, isConfirm, onConfirm) {
                 const modal = document.getElementById("customModal");
                 document.getElementById("modalTitle").innerText = title;
                 document.getElementById("modalMessage").innerText = message;
-
                 const actionsDiv = document.getElementById("modalActions");
                 actionsDiv.innerHTML = "";
 
@@ -423,7 +172,6 @@
                     okBtn.onclick = () => (modal.style.display = "none");
                     actionsDiv.appendChild(okBtn);
                 }
-
                 modal.style.display = "flex";
             }
 
@@ -439,21 +187,17 @@
                 if (!vendor) return;
 
                 document.getElementById('vendorName').value = vendor.name;
-                
-                document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
-                document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
+                document.getElementById('techFileDisplay').innerHTML = `<span style="color: #d97706; font-weight: bold;">Current File: ${escapeHTML(vendor.techFile.name)} (Leave empty to keep)</span>`;
+                document.getElementById('finFileDisplay').innerHTML = `<span style="color: #d97706; font-weight: bold;">Current File: ${escapeHTML(vendor.finFile.name)} (Leave empty to keep)</span>`;
 
-                const addBtn = document.getElementById('addVendorBtn'); 
+                const addBtn = document.querySelector('.add-btn'); 
                 if(addBtn) addBtn.innerText = "Update Vendor";
                 
                 editingVendorId = id;
             };
 
-            // 1. Fix addVendor Function
             window.addVendor = function() {
                 const nameInput = document.getElementById('vendorName').value.trim();
-                
-                // BUG 1 FIXED: Use the correct HTML IDs
                 const techInput = document.getElementById('vendorTechFile'); 
                 const finInput = document.getElementById('vendorFinFile');
 
@@ -476,103 +220,70 @@
                     }
 
                     editingVendorId = null;
-                    
-                    // Extra Fix: The button doesn't have an ID, so we select it by class
                     const addBtn = document.querySelector('.add-btn'); 
                     if(addBtn) addBtn.innerText = "Add Vendor to Queue";
                     
-                    document.getElementById('techFileDisplay').innerText = "";
-                    document.getElementById('finFileDisplay').innerText = "";
+                    document.getElementById('techFileDisplay').innerHTML = "";
+                    document.getElementById('finFileDisplay').innerHTML = "";
                     
                 } else {
                     if (techInput.files.length === 0 || finInput.files.length === 0) {
                         alert("Please select both Technical and Financial files for the new vendor.");
                         return;
                     }
-
                     vendorQueue.push({
-                        id: Date.now(), // Unique ID generated here
+                        id: Date.now(),
                         name: nameInput,
                         techFile: techInput.files[0],
                         finFile: finInput.files[0]
                     });
                 }
-
                 document.getElementById('vendorName').value = "";
                 techInput.value = "";
                 finInput.value = "";
-                
-                // BUG 2 FIXED: Call the correct UI update function
                 updateVendorUI(); 
             };
 
-            // 2. Fix updateVendorUI Function
             function updateVendorUI() {
                 const listDiv = document.getElementById("vendorList");
                 if (vendorQueue.length === 0) {
                     listDiv.innerHTML = "No vendors added yet.";
                     return;
                 }
-
-                listDiv.innerHTML = vendorQueue
-                    .map(
-                        (v, index) =>
-                            `<div class="vendor-item" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 10px 0;">
-                    <div>
-                        ✅ <strong>${v.name}</strong><br>
-                        <span style="color: #64748b;">Tech:</span> ${v.techFile.name}<br>
-                        <span style="color: #64748b;">Fin:</span> ${v.finFile.name}
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <!-- BUG 3 FIXED: Pass v.id instead of the array index so the edit function finds the right vendor -->
-                        <button onclick="editVendor(${v.id})" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
-                        
-                        <button onclick="removeVendor(${index})" style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">🗑️ Delete</button>
-                    </div>
-                </div>`,
-                    )
-                    .join("");
+                listDiv.innerHTML = vendorQueue.map((v, index) =>
+                    `<div class="vendor-item" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 10px 0;">
+                        <div>
+                            ✅ <strong>${escapeHTML(v.name)}</strong><br>
+                            <span style="color: #64748b;">Tech:</span> ${escapeHTML(v.techFile.name)}<br>
+                            <span style="color: #64748b;">Fin:</span> ${escapeHTML(v.finFile.name)}
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="editVendor(${v.id})" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
+                            <button onclick="removeVendor(${index})" style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">🗑️ Delete</button>
+                        </div>
+                    </div>`
+                ).join("");
             }
-            function processUploads() {
-                const standardFile =
-                    document.getElementById("standardFile").files[0];
 
+            function processUploads() {
+                const standardFile = document.getElementById("standardFile").files[0];
                 if (!standardFile) {
-                    showCustomModal(
-                        "Missing Document",
-                        "Please upload the Standard Specifications file.",
-                        false,
-                    );
+                    showCustomModal("Missing Document", "Please upload the Standard Specifications file.", false);
                     return;
                 }
                 if (vendorQueue.length === 0) {
-                    showCustomModal(
-                        "Missing Vendor",
-                        "Please add at least one vendor offer to the queue.",
-                        false,
-                    );
+                    showCustomModal("Missing Vendor", "Please add at least one vendor offer to the queue.", false);
                     return;
                 }
                 if (standardFile.size > MAX_FILE_SIZE) {
-                    showCustomModal(
-                        "File Too Large",
-                        "The Standard Specifications file exceeds the 100MB limit.",
-                        false,
-                    );
+                    showCustomModal("File Too Large", "The Standard Specifications file exceeds the 100MB limit.", false);
                     return;
                 }
-
                 let expectedCost = vendorQueue.length * 15;
                 let confirmMessage = `The AI analysis will require ${expectedCost} points from your quota.\n\nAre you sure you want to proceed?`;
-
-                showCustomModal(
-                    "Confirm Analysis",
-                    confirmMessage,
-                    true,
-                    async () => {
-                        await executeUploadSequence(standardFile);
-                    },
-                );
+                showCustomModal("Confirm Analysis", confirmMessage, true, async () => {
+                    await executeUploadSequence(standardFile);
+                });
             }
 
             async function executeUploadSequence(standardFile) {
@@ -592,13 +303,8 @@
 
                     const quotaRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                            vendorCount: vendorQueue.length,
-                        }),
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ vendorCount: vendorQueue.length })
                     });
 
                     if (!quotaRes.ok) {
@@ -642,14 +348,11 @@
 
                     let res = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                         method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                        headers: { Authorization: `Bearer ${token}` },
                         body: stdFormData,
                     });
 
                     if (!res.ok) throw new Error("Failed to upload standard specifications.");
-
                     updateProgress("Standard Specifications uploaded successfully.");
 
                     let uploadedVendorNames = [];
@@ -665,9 +368,7 @@
 
                         let vTechRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                             method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
+                            headers: { Authorization: `Bearer ${token}` },
                             body: vTechFormData,
                         });
                         if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
@@ -682,9 +383,7 @@
 
                         let vFinRes = await fetch(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
                             method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
+                            headers: { Authorization: `Bearer ${token}` },
                             body: vFinFormData,
                         });
                         if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
@@ -701,10 +400,7 @@
                     progressText.style.color = "#10b981";
 
                     isUploading = true;
-
-                    setTimeout(() => {
-                        window.location.href = "processing.html";
-                    }, 1500);
+                    setTimeout(() => { window.location.href = "processing.html"; }, 1500);
                 } catch (err) {
                     progressContainer.style.display = "none";
                     statusMsg.style.display = "block";
@@ -715,27 +411,10 @@
             
             document.addEventListener("DOMContentLoaded", () => {
                 const userName = sessionStorage.getItem("user_name") || "Committee Member";
-                
-                document.getElementById("userNameDisplay").innerText = userName;
-
-                const initials = userName.split(' ')
-                                        .map(n => n[0])
-                                        .join('')
-                                        .substring(0, 2)
-                                        .toUpperCase();
-                                        
-                document.getElementById("userAvatar").innerText = initials;
+                document.getElementById("userNameDisplay").innerText = escapeHTML(userName);
+                const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById("userAvatar").innerText = escapeHTML(initials);
             });
         </script>
-        <!-- Custom Modal -->
-        <div class="modal-overlay" id="customModal">
-            <div class="modal-content">
-                <h3 class="modal-title" id="modalTitle">Notification</h3>
-                <div class="modal-message" id="modalMessage"></div>
-                <div class="modal-actions" id="modalActions">
-                    <!-- Buttons will be injected here via JS -->
-                </div>
-            </div>
-        </div>
     </body>
 </html>
