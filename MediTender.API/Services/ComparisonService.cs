@@ -69,26 +69,6 @@ namespace MediTender.API.Services
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var financialService = scope.ServiceProvider.GetRequiredService<IFinancialEvaluationService>();
 
-                    var oldEvaluations = await dbContext.OfferEvaluations
-                        .Include(e => e.Details)
-                        .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
-                        .ToListAsync(cancellationToken);
-
-                    if (oldEvaluations.Any())
-                    {
-                        dbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
-                        dbContext.OfferEvaluations.RemoveRange(oldEvaluations);
-                    }
-
-                    var oldFinancialOffers = await dbContext.VendorOffers
-                        .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
-                        .ToListAsync(cancellationToken);
-
-                    if (oldFinancialOffers.Any()) 
-                        dbContext.VendorOffers.RemoveRange(oldFinancialOffers);
-                        
-                    await dbContext.SaveChangesAsync(cancellationToken);
-                        
                     var evaluation = new OfferEvaluation
                     {
                         TenderId = tenderId,
@@ -200,15 +180,25 @@ namespace MediTender.API.Services
                                     if (matchFound)
                                     {
                                         if (aiDetail.TryGetProperty("Score", out var scoreProp) && scoreProp.ValueKind == JsonValueKind.Number)
+                                        {
                                             baseScore = scoreProp.GetInt32();
+                                        }
 
                                         if (aiDetail.TryGetProperty("Status", out var statusProp))
-                                            status = statusProp.GetString() ?? "Not Met";
+                                        {
+                                            var rawStatus = statusProp.GetString();
+                                            var validStatuses = new[] { "Met", "Partially Met", "Not Met", "Not Mentioned" };
+                                            status = validStatuses.Contains(rawStatus) ? rawStatus! : "Error";
+                                        }
                                         else
-                                            status = "Not Met"; 
+                                        {
+                                            status = "Error"; 
+                                        }
 
                                         if (aiDetail.TryGetProperty("Evidence", out var evidenceProp))
+                                        {
                                             evidence = evidenceProp.GetString() ?? "No evidence found.";
+                                        }
                                     }
 
                                     int weight = req.IsMandatory ? 2 : 1; 
@@ -270,6 +260,24 @@ namespace MediTender.API.Services
                     
                     evaluation.TotalPrice = finOffer.TotalPrice; 
 
+                    var oldEvaluations = await dbContext.OfferEvaluations
+                        .Include(e => e.Details)
+                        .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
+                        .ToListAsync(cancellationToken);
+
+                    if (oldEvaluations.Any())
+                    {
+                        dbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
+                        dbContext.OfferEvaluations.RemoveRange(oldEvaluations);
+                    }
+
+                    var oldFinancialOffers = await dbContext.VendorOffers
+                        .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
+                        .ToListAsync(cancellationToken);
+
+                    if (oldFinancialOffers.Any()) 
+                        dbContext.VendorOffers.RemoveRange(oldFinancialOffers);
+
                     dbContext.OfferEvaluations.Add(evaluation);
                     await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -278,7 +286,8 @@ namespace MediTender.API.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to completely evaluate vendor {VendorName}", vendor);
-                    return new OfferEvaluation
+                    
+                    var errorEval = new OfferEvaluation
                     {
                         TenderId = tenderId,
                         VendorName = vendor,
@@ -287,6 +296,36 @@ namespace MediTender.API.Services
                         FinalDecision = "Error",
                         Details = new List<EvaluationDetail>()
                     };
+
+                    try 
+                    {
+                        using var errorScope = _scopeFactory.CreateScope();
+                        var errorDbContext = errorScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                        
+                        var oldEvaluations = await errorDbContext.OfferEvaluations
+                            .Include(e => e.Details)
+                            .Where(e => e.TenderId == tenderId && e.VendorName == vendor)
+                            .ToListAsync(cancellationToken);
+
+                        if (oldEvaluations.Any())
+                        {
+                            errorDbContext.EvaluationDetails.RemoveRange(oldEvaluations.SelectMany(e => e.Details));
+                            errorDbContext.OfferEvaluations.RemoveRange(oldEvaluations);
+                        }
+
+                        var oldFinancialOffers = await errorDbContext.VendorOffers
+                            .Where(v => v.TenderId == tenderId && v.CompanyName == vendor)
+                            .ToListAsync(cancellationToken);
+
+                        if (oldFinancialOffers.Any()) 
+                            errorDbContext.VendorOffers.RemoveRange(oldFinancialOffers);
+
+                        errorDbContext.OfferEvaluations.Add(errorEval);
+                        await errorDbContext.SaveChangesAsync(cancellationToken);
+                    }
+                    catch { }
+
+                    return errorEval;
                 }
                 finally
                 {

@@ -139,13 +139,26 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return Unauthorized(new { Message = "Access denied to this tender." });
 
+            int questionCost = 2;
+            var quotaResult = await TryConsumeQuotaAsync(questionCost);
+            if (!quotaResult.Success)
+            {
+                return BadRequest(new { Message = quotaResult.Error });
+            }
+
             try
             {
                 var answer = await ragService.AnalyzeOfferAsync(request.Question, request.TenderId, request.VendorName);
                 return Ok(new { Answer = answer });
             }
+            catch (OperationCanceledException)
+            {
+                await RefundQuotaAsync(questionCost);
+                return StatusCode(499, "Client closed the request.");
+            }
             catch (Exception ex)
             {
+                await RefundQuotaAsync(questionCost);
                 _logger.LogError(ex, "Error processing Q&A request for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while answering the question. Please try again." });
             }
@@ -312,6 +325,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while resetting the system." });
             }
         }        
+        
         public class FileUploadRequest
         {
             public IFormFile? File { get; set; }
@@ -363,6 +377,7 @@ namespace MediTender.API.Controllers
                 throw;
             }
         }        
+
         private async Task RefundQuotaAsync(int amount)
         {
             if (User.IsInRole("Committee")) return;
@@ -477,7 +492,7 @@ namespace MediTender.API.Controllers
 
                 return Ok(new { Message = "Override saved to database successfully" });
             }
-        catch (Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error overriding evaluation for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing the evaluation override." });
@@ -629,12 +644,14 @@ namespace MediTender.API.Controllers
 
             return Ok(tenders);
         }
+
         public class FinancialOverrideRequest
         {
             public int TenderId { get; set; }
             public string VendorName { get; set; } = string.Empty;
             public decimal NewPrice { get; set; }
         }
+
         public class VendorOverrideRequest
         {
             public int TenderId { get; set; }
