@@ -4,5 +4,6 @@ namespace MediTender.API.Services
     {
         Task DeleteExistingDocumentAsync(int tenderId, string documentType, string vendorName);
         Task SaveChunksToQdrantAsync(string fileName, string documentType, string vendorName, List<string> chunks, int tenderId);
+        Task EnsureCollectionExistsAsync();
     }
 }
