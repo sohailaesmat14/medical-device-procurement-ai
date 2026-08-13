@@ -7,11 +7,9 @@ using Polly.Extensions.Http;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
-using Polly;
-using Polly.Extensions.Http;
+
 
 var builder = WebApplication.CreateBuilder(args);
 

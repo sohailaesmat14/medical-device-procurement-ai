@@ -137,7 +137,7 @@ namespace MediTender.API.Services
                 {
                     allEmbeddings.Add(embedding.GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray());
                 }
-                if (i + batchSize < chunks.Count)
+                if (i + batchSize < texts.Count)
                 {
                     await Task.Delay(2000, cancellationToken); 
                 }
