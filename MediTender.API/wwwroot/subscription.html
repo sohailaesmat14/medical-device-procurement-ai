@@ -200,7 +200,7 @@
                         <li>Basic Decision Matrix Export</li>
                     </ul>
                 </div>
-                <button class="subscribe-btn btn-free" onclick="selectPlan('free', 200, this)">Start Free Trial 🚀</button>
+                <button class="subscribe-btn btn-free" onclick="selectPlan('free', CONFIG.BILLING.FREE_QUOTA, this)">Start Free Trial 🚀</button>
             </div>
 
             <!-- Monthly Plan (Featured) -->
@@ -217,7 +217,7 @@
                         <li>Excel & PDF Export Options</li>
                     </ul>
                 </div>
-                <button class="subscribe-btn" onclick="selectPlan('monthly', 2000, this)">Subscribe Monthly</button>
+                <button class="subscribe-btn" onclick="selectPlan('monthly', CONFIG.BILLING.MONTHLY_QUOTA, this)">Subscribe Monthly</button>
             </div>
 
             <!-- Annual Plan -->
@@ -233,7 +233,7 @@
                         <li>Dedicated Technical Support</li>
                     </ul>
                 </div>
-                <button class="subscribe-btn" onclick="selectPlan('annually', 99999, this)">Subscribe Annually</button>
+                <button class="subscribe-btn" onclick="selectPlan('annually', CONFIG.BILLING.ANNUAL_QUOTA, this)">Subscribe Annually</button>
             </div>
         </div>
     </div>

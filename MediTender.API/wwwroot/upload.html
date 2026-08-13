@@ -573,7 +573,7 @@
                     }
                 }
 
-                let expectedCost = vendorQueue.length * 15;
+                let expectedCost = vendorQueue.length * CONFIG.BILLING.PER_VENDOR_COST;
                 let confirmMessage = `The AI analysis will require ${expectedCost} points from your quota.\n\nAre you sure you want to proceed?`;
 
                 showCustomModal(

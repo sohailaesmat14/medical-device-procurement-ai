@@ -2,7 +2,14 @@ const CONFIG = {
     API_BASE_URL:
         window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
             ? "http://localhost:5172"
-            : window.location.origin 
+            : window.location.origin,
+            
+    BILLING: {
+        FREE_QUOTA: 200,
+        MONTHLY_QUOTA: 2000,
+        ANNUAL_QUOTA: 99999,
+        PER_VENDOR_COST: 15
+    }
 };
 
 const style = document.createElement('style');
