@@ -77,7 +77,9 @@ namespace MediTender.API.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to delete existing document chunks.");
+                _logger.LogError(ex, "CRITICAL: Failed to delete existing document chunks for TenderId: {TenderId}, DocumentType: {DocumentType}. Aborting operation to prevent RAG data duplication and context mixing.", tenderId, documentType);
+                
+                throw; 
             }
         }
     }
