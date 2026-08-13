@@ -16,13 +16,15 @@ namespace MediTender.API.Controllers
     {
         private readonly IPaymobService _paymobService;
         private readonly ApplicationDbContext _dbContext;
-        private readonly ILogger<PaymentController> _logger; 
+        private readonly ILogger<PaymentController> _logger;
+        private readonly IEmailService _emailService;
 
-        public PaymentController(IPaymobService paymobService, ApplicationDbContext dbContext, ILogger<PaymentController> logger)
+        public PaymentController(IPaymobService paymobService, ApplicationDbContext dbContext, ILogger<PaymentController> logger, IEmailService emailService)
         {
             _paymobService = paymobService;
             _dbContext = dbContext;
             _logger = logger;
+            _emailService = emailService;
         }
 
         [HttpPost("initiate")]
@@ -133,6 +135,16 @@ namespace MediTender.API.Controllers
                                 (int)(Models.BillingConstants.MonthlyPlanPrice * 100), 
                                 (int)(Models.BillingConstants.AnnualPlanPrice * 100), 
                                 amountCents);
+
+                            try
+                            {
+                                await _emailService.SendEmailAsync(
+                                    "admin@meditender.gov.eg",
+                                    "URGENT: Payment Amount Mismatch",
+                                    $"CRITICAL: Amount mismatch detected. OrderId: {orderId}, Billed Email: {user.Email}. Expected Monthly or Annual amount, but received {amountCents} cents. User charged but NO PLAN ASSIGNED."
+                                );
+                            }
+                            catch { }
                         }
 
                         _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
@@ -154,6 +166,16 @@ namespace MediTender.API.Controllers
                             "CRITICAL: ORPHAN PAYMENT DETECTED! OrderId: {OrderId}, Amount: {AmountCents} cents, Billed Email: {Email}. " +
                             "The payment was successful, but no matching user was found in the database. Manual reconciliation is required.", 
                             orderId, amountCents, userEmail);
+
+                        try
+                        {
+                            await _emailService.SendEmailAsync(
+                                "admin@meditender.gov.eg",
+                                "URGENT: Orphan Payment Detected",
+                                $"CRITICAL: Orphan payment detected. OrderId: {orderId}, Amount: {amountCents} cents, Billed Email: {userEmail}. The payment was successful, but no matching user was found in the database."
+                            );
+                        }
+                        catch { }
                             
                         await transaction.RollbackAsync();
                     }
