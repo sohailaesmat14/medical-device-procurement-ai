@@ -191,12 +191,8 @@
                     sessionStorage.setItem("user_name", data.fullName || user);
                     sessionStorage.setItem("user_email", user);
                     
-                    if (data.plan) {
-                        sessionStorage.setItem("meditender_plan", data.plan);
-                        window.location.replace("upload.html");
-                    } else {
-                        window.location.replace("subscription.html");
-                    }
+                    sessionStorage.setItem("meditender_plan", data.plan);
+                    window.location.replace("upload.html");
                 } else {
                     errorMsg.innerText = "Invalid credentials. Try again.";
                     errorMsg.style.display = "block";
