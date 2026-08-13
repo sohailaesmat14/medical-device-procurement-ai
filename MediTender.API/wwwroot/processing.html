@@ -70,7 +70,6 @@
             .logo span {
                 color: #10b981;
             }
-
             .loading-container {
                 flex: 1;
                 display: flex;
@@ -119,7 +118,6 @@
                 color: #64748b;
                 font-weight: bold;
             }
-            /* Progress Bar Styles */
             .progress-wrapper {
                 width: 80%;
                 max-width: 500px;
@@ -145,8 +143,6 @@
                 font-weight: bold;
                 box-sizing: border-box;
             }
-
-            /* Retry Button Styles */
             .retry-btn {
                 margin-top: 25px;
                 padding: 12px 25px;
@@ -161,9 +157,14 @@
                 transition: 0.3s;
                 box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
             }
-            .retry-btn:hover {
+            .retry-btn:hover:not(:disabled) {
                 background-color: #dc2626;
                 transform: translateY(-2px);
+            }
+            .retry-btn:disabled {
+                background-color: #fca5a5;
+                cursor: not-allowed;
+                box-shadow: none;
             }
         </style>
     </head>
@@ -195,7 +196,7 @@
 
             <div id="errorContainer" style="display: none; margin-top: 20px; padding: 15px; border-left: 4px solid #ef4444; background-color: #fee2e2;">
                 <p id="errorMessage" style="color: #b91c1c; font-weight: 500; margin-bottom: 15px;"></p>
-                <button id="retryBtn" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;">
+                <button id="retryBtn" class="retry-btn" style="display: inline-block;">
                     Resume Processing 🔄
                 </button>
             </div>
@@ -231,7 +232,6 @@
                 }
             }
 
-            // FIX: Read the current step from session storage, default to 'extract'
             let currentStep = sessionStorage.getItem("meditender_current_step") || "extract"; 
 
             document.addEventListener("DOMContentLoaded", () => {
@@ -252,7 +252,7 @@
                     const standardFile = sessionStorage.getItem("meditender_standard_file");
                     const vendorsRaw = sessionStorage.getItem("meditender_vendors");
                     const currentTenderId = sessionStorage.getItem("meditender_current_id");
-                    const token = sessionStorage.getItem("jwt_token"); // Added token retrieval here
+                    const token = sessionStorage.getItem("jwt_token"); 
 
                     const statusText = document.getElementById("processStatus");
                     const progressWrapper = document.getElementById("progressWrapper");
@@ -262,6 +262,11 @@
                     const mainTitle = document.getElementById("mainTitle");
                     const errorContainer = document.getElementById("errorContainer");
                     const errorMessage = document.getElementById("errorMessage");
+
+                    if (retryBtn) {
+                        retryBtn.disabled = false;
+                        retryBtn.innerText = "Resume Processing 🔄";
+                    }
 
                     function showErrorState(message) {
                         window.removeEventListener("beforeunload", unloadWarning);
@@ -313,7 +318,6 @@
 
                             updateProgress(45, "Phase 1 Complete! Standard requirements extracted successfully.");
                             
-                            // FIX: Save state so refresh doesn't repeat Phase 1
                             currentStep = "compare"; 
                             sessionStorage.setItem("meditender_current_step", "compare");
                             
@@ -344,7 +348,6 @@
 
                             updateProgress(100, "Analysis Complete! Redirecting to Decision Matrix...");
                             
-                            // FIX: Clean up the state after full success
                             sessionStorage.removeItem("meditender_current_step");
                             sessionStorage.setItem("meditender_evaluations", JSON.stringify(evaluations));
                             window.onbeforeunload = null;
@@ -367,6 +370,8 @@
 
                         if(retryBtn) {
                             retryBtn.onclick = () => {
+                                retryBtn.disabled = true;
+                                retryBtn.innerText = "Resuming... ⏳";
                                 window.addEventListener("beforeunload", unloadWarning);
                                 if(errorContainer) errorContainer.style.display = "none";
                                 startProcessing();

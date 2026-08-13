@@ -67,7 +67,6 @@
             .logo span {
                 color: #10b981;
             }
-
             .main-container {
                 max-width: 900px;
                 margin: 50px auto;
@@ -98,7 +97,6 @@
                 font-size: 15px;
                 line-height: 1.6;
             }
-
             .upload-cards-wrapper {
                 display: flex;
                 gap: 30px;
@@ -118,7 +116,6 @@
                 color: #1e293b;
                 text-align: center;
             }
-
             input[type="file"],
             input[type="text"] {
                 width: 100%;
@@ -142,7 +139,6 @@
             .add-btn:hover {
                 background-color: #059669;
             }
-
             .vendor-list {
                 font-size: 14px;
                 background: #f1f5f9;
@@ -155,7 +151,6 @@
                 border-bottom: 1px solid #e2e8f0;
                 font-size: 13px;
             }
-
             .start-btn {
                 background-color: #2563eb;
                 color: white;
@@ -175,15 +170,12 @@
                 background-color: #94a3b8;
                 cursor: not-allowed;
             }
-
             #statusMessage {
                 margin-top: 15px;
                 font-weight: bold;
                 color: #ef4444;
                 display: none;
             }
-
-            /* Progress Bar Styles */
             .progress-container {
                 display: none;
                 margin-top: 25px;
@@ -360,7 +352,6 @@
                 Start Upload & Analysis 🚀
             </button>
 
-            <!-- Progress Bar HTML -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-info">
                     <span class="progress-step" id="progressStep"
@@ -443,11 +434,6 @@
                 document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
                 document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
 
-                // FIX: this button has no id (see the class-selector fix already used
-                // a few lines below when resetting text back to "Add Vendor to Queue").
-                // Looking it up by a non-existent id here meant the guard `if(addBtn)`
-                // silently skipped the update, so the button text never actually
-                // changed to "Update Vendor" while editing.
                 const addBtn = document.querySelector('.add-btn');
                 if(addBtn) addBtn.innerText = "Update Vendor";
                 
@@ -461,6 +447,12 @@
 
                 if (!nameInput) {
                     showToast("Please enter a vendor name.", "warning");
+                    return;
+                }
+
+                const isDuplicate = vendorQueue.some(v => v.name.toLowerCase() === nameInput.toLowerCase() && v.id !== editingVendorId);
+                if (isDuplicate) {
+                    showToast("A vendor with this name already exists in the queue.", "warning");
                     return;
                 }
 
@@ -492,7 +484,7 @@
                     }
 
                     vendorQueue.push({
-                        id: Date.now(), 
+                        id: crypto.randomUUID(), 
                         name: nameInput,
                         techFile: techInput.files[0],
                         finFile: finInput.files[0]
@@ -532,9 +524,7 @@
                         <span style="color: #64748b;">Fin:</span> ${escapeHTML(v.finFile.name)}
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <!-- Pass v.id instead of the array index so the edit function finds the right vendor -->
-                        <button onclick="editVendor(${v.id})" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
-                        
+                        <button onclick="editVendor('${v.id}')" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
                         <button onclick="removeVendor(${index})" style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">🗑️ Delete</button>
                     </div>
                 </div>`,
@@ -657,7 +647,7 @@
                             Authorization: `Bearer ${token}`,
                         },
                         body: stdFormData,
-                        timeout: 300000 // 5 minutes
+                        timeout: 300000
                     });
 
                     if (!res.ok) throw new Error("Failed to upload standard specifications.");
@@ -681,7 +671,7 @@
                                 Authorization: `Bearer ${token}`,
                             },
                             body: vTechFormData,
-                            timeout: 300000 // 5 minutes
+                            timeout: 300000
                         });
 
                         if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
@@ -700,7 +690,7 @@
                                 Authorization: `Bearer ${token}`,
                             },
                             body: vFinFormData,
-                            timeout: 300000 // 5 minutes
+                            timeout: 300000
                         });
 
                         if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
@@ -744,13 +734,11 @@
                 document.getElementById("userAvatar").innerText = initials;
             });
         </script>
-        <!-- Custom Modal -->
         <div class="modal-overlay" id="customModal">
             <div class="modal-content">
                 <h3 class="modal-title" id="modalTitle">Notification</h3>
                 <div class="modal-message" id="modalMessage"></div>
                 <div class="modal-actions" id="modalActions">
-                    <!-- Buttons will be injected here via JS -->
                 </div>
             </div>
         </div>
