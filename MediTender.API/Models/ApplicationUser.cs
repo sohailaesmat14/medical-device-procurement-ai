@@ -16,6 +16,7 @@ namespace MediTender.API.Models
         public bool IsEmailVerified { get; set; } = false;
         public string VerificationToken { get; set; } = string.Empty;
         public string ResetPasswordToken { get; set; } = string.Empty;
-        public DateTime? TokenExpiration { get; set; }
+        public DateTime? VerificationTokenExpiration { get; set; }
+        public DateTime? ResetPasswordTokenExpiration { get; set; }
     }
 }

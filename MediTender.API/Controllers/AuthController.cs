@@ -29,7 +29,6 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
-        
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -63,7 +62,7 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("signup")]
-        [EnableRateLimiting("LoginPolicy")] // FIX: signup had no rate limiting at all, allowing unlimited free-trial account creation
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
@@ -71,7 +70,6 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "Email already exists." });
             }
 
-            // 1. Use Cryptographically Secure RNG
             var verificationCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
             var user = new ApplicationUser
@@ -83,7 +81,7 @@ namespace MediTender.API.Controllers
                 SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
                 IsEmailVerified = false,
                 VerificationToken = verificationCode,
-                TokenExpiration = DateTime.UtcNow.AddHours(24) 
+                VerificationTokenExpiration = DateTime.UtcNow.AddHours(24) 
             };
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
@@ -96,7 +94,6 @@ namespace MediTender.API.Controllers
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
-            // Professional HTML Email Template
             var emailBody = $@"
             <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
                 <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
@@ -132,18 +129,17 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("verify-email")]
-        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             
-            // 2. Check for token expiration alongside code validity
-            if (user == null || user.VerificationToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+            if (user == null || user.VerificationToken != request.Code || user.VerificationTokenExpiration < DateTime.UtcNow)
                 return BadRequest(new { Message = "Invalid or expired verification code." });
 
             user.IsEmailVerified = true;
             user.VerificationToken = string.Empty; 
-            user.TokenExpiration = null; // Clear expiration after success
+            user.VerificationTokenExpiration = null;
             await _dbContext.SaveChangesAsync();
 
             var token = GenerateJwtToken(user);
@@ -151,18 +147,17 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("forgot-password")]
-        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null) 
                 return Ok(new { Message = "If the email exists, a reset code will be sent." }); 
 
-            // 1. Use Cryptographically Secure RNG
             var resetCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             
             user.ResetPasswordToken = resetCode;
-            user.TokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            user.ResetPasswordTokenExpiration = DateTime.UtcNow.AddMinutes(15);
             
             await _dbContext.SaveChangesAsync();
 
@@ -174,25 +169,24 @@ namespace MediTender.API.Controllers
             }
             catch (Exception)
             {
-                
             }
 
             return Ok(new { Message = "If the email exists, a reset code will be sent." });
         }
 
         [HttpPost("reset-password")]
-        [EnableRateLimiting("LoginPolicy")] // 3. Prevent Brute Force Attacks
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null || user.ResetPasswordToken != request.Code || user.TokenExpiration < DateTime.UtcNow)
+            if (user == null || user.ResetPasswordToken != request.Code || user.ResetPasswordTokenExpiration < DateTime.UtcNow)
                 return BadRequest(new { Message = "Invalid or expired reset code." });
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.NewPassword);
             
             user.ResetPasswordToken = string.Empty;
-            user.TokenExpiration = null;
+            user.ResetPasswordTokenExpiration = null;
             
             await _dbContext.SaveChangesAsync();
 
@@ -218,7 +212,7 @@ namespace MediTender.API.Controllers
             if (user == null) return NotFound(new { Message = "User not found." });
 
             user.Plan = "free";
-            user.QuotaPoints = Models.BillingConstants.FreeTrialQuota; 
+            user.QuotaPoints = Models.BillingConstants.FreeTrialQuota;
             user.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7);
             
             await _dbContext.SaveChangesAsync();
@@ -293,20 +287,18 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("resend-verification")]
-        [EnableRateLimiting("LoginPolicy")] // Protect against email spamming
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             
-            // Security best practice: Don't reveal if the email exists or not to prevent email enumeration
             if (user == null || user.IsEmailVerified)
                 return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
 
-            // Generate a new secure code
             var newCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
             
             user.VerificationToken = newCode;
-            user.TokenExpiration = DateTime.UtcNow.AddHours(24);
+            user.VerificationTokenExpiration = DateTime.UtcNow.AddHours(24);
 
             await _dbContext.SaveChangesAsync();
 

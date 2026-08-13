@@ -71,7 +71,6 @@ namespace MediTender.API.Services
                 new System.Net.Http.Headers.MediaTypeHeaderValue("application/json")
             );
 
-
             cancellationToken.ThrowIfCancellationRequested();
 
             var response = await _httpClient.PostAsync(url, content, cancellationToken);
@@ -106,6 +105,7 @@ namespace MediTender.API.Services
             using var doc = JsonDocument.Parse(responseString);
             return doc.RootElement.GetProperty("embedding").GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray();
         }
+
         public async Task<List<float[]>> GetEmbeddingsBatchAsync(List<string> texts, CancellationToken cancellationToken = default)
         {
             var allEmbeddings = new List<float[]>();
@@ -133,10 +133,19 @@ namespace MediTender.API.Services
                 var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
                 using var doc = JsonDocument.Parse(responseString);
                 
-                foreach (var embedding in doc.RootElement.GetProperty("embeddings").EnumerateArray())
+                var returnedEmbeddings = doc.RootElement.GetProperty("embeddings").EnumerateArray().ToList();
+                
+                if (returnedEmbeddings.Count != batch.Count)
+                {
+                    _logger.LogError("Silent truncation detected: Gemini API returned {ReturnedCount} embeddings for a batch of {RequestedCount} chunks.", returnedEmbeddings.Count, batch.Count);
+                    throw new InvalidOperationException($"Silent truncation detected: Expected {batch.Count} embeddings, but received {returnedEmbeddings.Count}.");
+                }
+
+                foreach (var embedding in returnedEmbeddings)
                 {
                     allEmbeddings.Add(embedding.GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray());
                 }
+                
                 if (i + batchSize < texts.Count)
                 {
                     await Task.Delay(2000, cancellationToken); 
