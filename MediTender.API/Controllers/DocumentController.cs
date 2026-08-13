@@ -48,7 +48,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId && t.UserId == userId);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             var evaluations = await _dbContext.OfferEvaluations
                 .Include(e => e.Details)
@@ -75,7 +75,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             using var stream = request.File.OpenReadStream();
             byte[] header = new byte[4];
@@ -130,7 +130,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             try
             {
@@ -160,7 +160,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId(); // This is already here
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             var user = await _dbContext.Users.FindAsync(new object[] { userId }, cancellationToken);
             if (user != null && user.Plan == "free" && request.VendorNames.Count > 2)
@@ -219,7 +219,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             // 1. Consume ONLY the cost of the extraction phase (10 points).
             // The Comparison phase will naturally handle its own cost in the CompareVendors endpoint.
@@ -440,8 +440,7 @@ namespace MediTender.API.Controllers
 
             var ownerTender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == committeeUserId);
             if (ownerTender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
-
+                return StatusCode(403, new { Message = "Access denied to this tender." });
             try
             {
                 var evaluation = await _dbContext.OfferEvaluations
@@ -532,7 +531,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             try
             {
@@ -585,7 +584,7 @@ namespace MediTender.API.Controllers
             int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId);
             if (tender == null)
-                return Unauthorized(new { Message = "Access denied to this tender." });
+                return StatusCode(403, new { Message = "Access denied to this tender." });
 
             try
             {
