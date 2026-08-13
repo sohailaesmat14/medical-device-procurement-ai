@@ -467,17 +467,7 @@ namespace MediTender.API.Controllers
                 detail.Evidence = $"✅ Manually verified and approved by committee member (ID: {committeeUserId}).";
                 detail.Score = detail.IsMandatory ? 20 : 10;
 
-                evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
-
-                bool hasFailedMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Not Met" || d.Status == "Error"));
-                bool hasPartialOrMissingMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned"));
-
-                if (hasFailedMandatory)
-                    evaluation.FinalDecision = "Recommended for Rejection";
-                else if (hasPartialOrMissingMandatory)
-                    evaluation.FinalDecision = "Pending Manual Review";
-                else
-                    evaluation.FinalDecision = "Recommended for Acceptance";
+                evaluation.UpdateFinalDecision();
 
                 var vendorOffer = await _dbContext.VendorOffers.FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
                 if (vendorOffer != null)
@@ -558,17 +548,7 @@ namespace MediTender.API.Controllers
                     detail.Score = 20;
                 }
 
-                evaluation.TotalScore = evaluation.Details.Sum(d => d.Score);
-
-                bool hasFailedMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Not Met" || d.Status == "Error"));
-                bool hasPartialOrMissingMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned"));
-
-                if (hasFailedMandatory)
-                    evaluation.FinalDecision = "Recommended for Rejection";
-                else if (hasPartialOrMissingMandatory)
-                    evaluation.FinalDecision = "Pending Manual Review";
-                else
-                    evaluation.FinalDecision = "Recommended for Acceptance";
+                evaluation.UpdateFinalDecision();
 
                 var vendorOffer = await _dbContext.VendorOffers.FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
                 if (vendorOffer != null)

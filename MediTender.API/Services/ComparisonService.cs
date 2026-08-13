@@ -266,15 +266,7 @@ namespace MediTender.API.Services
                         }
                     }
 
-                    bool hasFailedMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Not Met" || d.Status == "Error"));
-                    bool hasPartialOrMissingMandatory = evaluation.Details.Any(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned"));
-
-                    if (hasFailedMandatory)
-                        evaluation.FinalDecision = "Recommended for Rejection";
-                    else if (hasPartialOrMissingMandatory)
-                        evaluation.FinalDecision = "Pending Manual Review";
-                    else
-                        evaluation.FinalDecision = "Recommended for Acceptance";
+                    evaluation.UpdateFinalDecision();
 
                     bool openFinancialEnvelope = evaluation.FinalDecision == "Recommended for Acceptance" || evaluation.FinalDecision == "Pending Manual Review";
                     

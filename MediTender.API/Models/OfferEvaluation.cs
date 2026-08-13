@@ -14,6 +14,21 @@ namespace MediTender.API.Models
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPrice { get; set; }
+
+        public void UpdateFinalDecision()
+        {
+            TotalScore = Details.Sum(d => d.Score);
+
+            bool hasFailedMandatory = Details.Any(d => d.IsMandatory && (d.Status == "Not Met" || d.Status == "Error"));
+            bool hasPartialOrMissingMandatory = Details.Any(d => d.IsMandatory && (d.Status == "Partially Met" || d.Status == "Not Mentioned"));
+
+            if (hasFailedMandatory)
+                FinalDecision = "Recommended for Rejection";
+            else if (hasPartialOrMissingMandatory)
+                FinalDecision = "Pending Manual Review";
+            else
+                FinalDecision = "Recommended for Acceptance";
+        }
     }
 
     public class EvaluationDetail
