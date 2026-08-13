@@ -12,6 +12,16 @@ const CONFIG = {
     }
 };
 
+fetch(`${CONFIG.API_BASE_URL}/api/Auth/billing-config`)
+    .then(res => res.json())
+    .then(data => {
+        CONFIG.BILLING.FREE_QUOTA = data.freeTrialQuota;
+        CONFIG.BILLING.MONTHLY_QUOTA = data.monthlyQuota;
+        CONFIG.BILLING.ANNUAL_QUOTA = data.annualQuota;
+        CONFIG.BILLING.PER_VENDOR_COST = data.perVendorCost;
+    })
+    .catch(() => {});
+
 const style = document.createElement('style');
 style.innerHTML = `
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }

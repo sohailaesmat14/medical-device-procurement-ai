@@ -29,6 +29,22 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
+        [HttpGet("billing-config")]
+        [AllowAnonymous]
+        public IActionResult GetBillingConfig()
+        {
+            return Ok(new
+            {
+                FreeTrialQuota = BillingConstants.FreeTrialQuota,
+                MonthlyQuota = BillingConstants.MonthlyQuota,
+                AnnualQuota = BillingConstants.AnnualQuota,
+                MonthlyPlanPrice = BillingConstants.MonthlyPlanPrice,
+                AnnualPlanPrice = BillingConstants.AnnualPlanPrice,
+                ExtractionCost = BillingConstants.ExtractionCost,
+                PerVendorCost = BillingConstants.PerVendorCost
+            });
+        }
+
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -139,7 +155,7 @@ namespace MediTender.API.Controllers
 
             user.IsEmailVerified = true;
             user.VerificationToken = string.Empty; 
-            user.VerificationTokenExpiration = null;
+            user.VerificationTokenExpiration = null; 
             await _dbContext.SaveChangesAsync();
 
             var token = GenerateJwtToken(user);
@@ -169,6 +185,7 @@ namespace MediTender.API.Controllers
             }
             catch (Exception)
             {
+                
             }
 
             return Ok(new { Message = "If the email exists, a reset code will be sent." });
@@ -212,14 +229,14 @@ namespace MediTender.API.Controllers
             if (user == null) return NotFound(new { Message = "User not found." });
 
             user.Plan = "free";
-            user.QuotaPoints = Models.BillingConstants.FreeTrialQuota;
+            user.QuotaPoints = Models.BillingConstants.FreeTrialQuota; 
             user.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7);
             
             await _dbContext.SaveChangesAsync();
 
             return Ok(new { Message = "Free trial activated successfully.", Plan = user.Plan, QuotaPoints = user.QuotaPoints });
-        }
-                
+        }        
+        
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> Me()
@@ -259,17 +276,6 @@ namespace MediTender.API.Controllers
             return CreateToken(claims);
         }
 
-        private string GenerateAdminJwtToken(string username, string role)
-        {
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, username),
-                new Claim(ClaimTypes.Role, role),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-            return CreateToken(claims);
-        }
-        
         private string CreateToken(Claim[] claims)
         {
             var jwtKey = _configuration["Jwt:Key"] ?? throw new ArgumentNullException("Jwt:Key is missing in appsettings.json");
@@ -280,7 +286,7 @@ namespace MediTender.API.Controllers
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(24), 
+                expires: DateTime.UtcNow.AddHours(24), 
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
@@ -314,7 +320,6 @@ namespace MediTender.API.Controllers
 
             return Ok(new { Message = "If your email is registered and unverified, a new code will be sent shortly." });
         }
-       
     }
 
     public class ResendVerificationRequest
