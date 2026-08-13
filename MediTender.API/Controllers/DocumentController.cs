@@ -130,7 +130,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
             }
         }
-                
+
         
         [HttpPost("ask")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
@@ -143,6 +143,12 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return StatusCode(403, new { Message = "Access denied to this tender." });
 
+            var quotaResult = await TryConsumeQuotaAsync(BillingConstants.AskCost);
+            if (!quotaResult.Success)
+            {
+                return BadRequest(new { Message = quotaResult.Error });
+            }
+
             try
             {
                 var answer = await ragService.AnalyzeOfferAsync(request.Question, request.TenderId, request.VendorName);
@@ -150,11 +156,12 @@ namespace MediTender.API.Controllers
             }
             catch (Exception ex)
             {
+                await RefundQuotaAsync(BillingConstants.AskCost);
                 _logger.LogError(ex, "Error processing Q&A request for Tender: {TenderId}, Vendor: {VendorName}", request.TenderId, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while answering the question. Please try again." });
             }
         }
-
+        
         public class QuestionRequest 
         { 
             public string Question { get; set; } = string.Empty; 

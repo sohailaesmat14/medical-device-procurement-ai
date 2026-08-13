@@ -11,5 +11,6 @@ namespace MediTender.API.Models
 
         public const int ExtractionCost = 10;
         public const int PerVendorCost = 15;
+        public const int AskCost = 2;
     }
 }
