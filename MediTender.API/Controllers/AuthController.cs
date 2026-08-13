@@ -162,6 +162,7 @@ namespace MediTender.API.Controllers
             return Ok(new { Token = token, Message = "Email verified successfully!" });
         }
 
+
         [HttpPost("forgot-password")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
