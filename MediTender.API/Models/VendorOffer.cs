@@ -10,13 +10,7 @@ namespace MediTender.API.Models
         public string CompanyName { get; set; } = string.Empty; 
         
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalPrice { get; set; } 
-        
-        public bool IsAccepted { get; set; } = false; 
-        
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal EvaluationScore { get; set; } 
-        
+        public decimal TotalPrice { get; set; }     
         public string AiRejectionReason { get; set; } = string.Empty; 
         
         public string Notes { get; set; } = string.Empty; 

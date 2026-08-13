@@ -469,13 +469,6 @@ namespace MediTender.API.Controllers
 
                 evaluation.UpdateFinalDecision();
 
-                var vendorOffer = await _dbContext.VendorOffers.FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
-                if (vendorOffer != null)
-                {
-                    vendorOffer.IsAccepted = evaluation.FinalDecision == "Recommended for Acceptance" || evaluation.FinalDecision == "Pending Manual Review";
-                    vendorOffer.EvaluationScore = evaluation.TotalScore;
-                }
-
                 await _dbContext.SaveChangesAsync();
 
                 _logger.LogWarning("AUDIT TRAIL: User {Email} (ID: {Id}) manually overrode requirement '{Requirement}' for vendor '{Vendor}' in Tender '{TenderId}'.", 
@@ -550,12 +543,6 @@ namespace MediTender.API.Controllers
 
                 evaluation.UpdateFinalDecision();
 
-                var vendorOffer = await _dbContext.VendorOffers.FirstOrDefaultAsync(v => v.TenderId == request.TenderId && v.CompanyName == request.VendorName);
-                if (vendorOffer != null)
-                {
-                    vendorOffer.IsAccepted = evaluation.FinalDecision == "Recommended for Acceptance" || evaluation.FinalDecision == "Pending Manual Review";
-                    vendorOffer.EvaluationScore = evaluation.TotalScore;
-                }
 
                 await _dbContext.SaveChangesAsync();
                 return Ok(new { Message = "Vendor decision completely updated and saved to database." });
