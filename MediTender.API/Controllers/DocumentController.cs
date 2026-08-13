@@ -163,9 +163,9 @@ namespace MediTender.API.Controllers
                 return StatusCode(403, new { Message = "Access denied to this tender." });
 
             var user = await _dbContext.Users.FindAsync(new object[] { userId }, cancellationToken);
-            if (user != null && user.Plan == "free" && request.VendorNames.Count > 2)
+            if (user != null && user.Plan == "free" && request.VendorNames.Count > 5)
             {
-                return BadRequest(new { Message = "Free plan allows a maximum of 2 vendors per evaluation. Please upgrade your plan." });
+                return BadRequest(new { Message = "Free plan allows a maximum of 5 vendors per evaluation. Please upgrade your plan." });
             }
 
             request.VendorNames = request.VendorNames.Select(v => v.Trim()).ToList();
@@ -418,9 +418,9 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Success = false, Message = "❌ Your subscription or free trial has expired. Please renew your plan to continue." });
             }
 
-            if (user.Plan == "free" && request.VendorCount > 2)
+            if (user.Plan == "free" && request.VendorCount > 5)
             {
-                return BadRequest(new { Success = false, Message = "❌ Free plan limits evaluations to a maximum of 2 vendors per tender. Please upgrade your plan." });
+                return BadRequest(new { Success = false, Message = "❌ Free plan limits evaluations to a maximum of 5 vendors per tender. Please upgrade your plan." });
             }
 
             if (user.QuotaPoints >= cost)
