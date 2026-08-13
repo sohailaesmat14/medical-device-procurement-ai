@@ -25,16 +25,7 @@ namespace MediTender.API.Services
         public async Task SaveChunksToQdrantAsync(string fileName, string documentType, string vendorName, List<string> chunks, int tenderId)
         {
 
-            var allEmbeddings = new List<float[]>();
-            int batchSize = 100;
-            
-            for (int i = 0; i < chunks.Count; i += batchSize)
-            {
-                var currentBatch = chunks.Skip(i).Take(batchSize).ToList();
-                var batchEmbeddings = await _geminiService.GetEmbeddingsBatchAsync(currentBatch);
-                allEmbeddings.AddRange(batchEmbeddings);
-                await Task.Delay(1000); 
-            }
+            var allEmbeddings = await _geminiService.GetEmbeddingsBatchAsync(chunks);
 
             var points = new List<PointStruct>();
 

@@ -654,6 +654,7 @@
                             Authorization: `Bearer ${token}`,
                         },
                         body: stdFormData,
+                        timeout: 300000 // 5 minutes
                     });
 
                     if (!res.ok) throw new Error("Failed to upload standard specifications.");
@@ -677,7 +678,9 @@
                                 Authorization: `Bearer ${token}`,
                             },
                             body: vTechFormData,
+                            timeout: 300000 // 5 minutes
                         });
+
                         if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
                         updateProgress(`Technical Offer for ${v.name} uploaded successfully.`);
 
@@ -694,7 +697,9 @@
                                 Authorization: `Bearer ${token}`,
                             },
                             body: vFinFormData,
+                            timeout: 300000 // 5 minutes
                         });
+                        
                         if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
                         updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
 
