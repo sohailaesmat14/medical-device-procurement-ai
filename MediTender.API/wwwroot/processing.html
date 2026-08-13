@@ -293,8 +293,7 @@
                                 },
                                 body: JSON.stringify({
                                     fileName: standardFile,
-                                    tenderId: parseInt(currentTenderId),
-                                    vendorCount: vendors.length // Fix: Passed vendor count for quota reservation
+                                    tenderId: parseInt(currentTenderId)
                                 }),
                                 timeout: 300000 
                             });

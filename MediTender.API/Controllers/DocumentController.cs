@@ -659,7 +659,6 @@ namespace MediTender.API.Controllers
         {
             public string FileName { get; set; } = string.Empty;
             public int TenderId { get; set; }
-            public int VendorCount { get; set; }
         }
 
     }
