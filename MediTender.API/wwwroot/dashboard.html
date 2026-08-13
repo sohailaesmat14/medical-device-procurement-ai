@@ -958,7 +958,19 @@
                     });
 
                     vendor.totalScore = vendor.details.reduce((sum, d) => sum + d.score, 0);
-                    vendor.finalDecision = "Recommended for Acceptance";
+                    
+                    let hasFailedMandatory = vendor.details.some(
+                        (d) => d.isMandatory && (d.status === "Not Met" || d.status === "Error")
+                    );
+                    let hasPartialOrMissing = vendor.details.some(
+                        (d) => d.isMandatory && (d.status === "Partially Met" || d.status === "Not Mentioned")
+                    );
+
+                    vendor.finalDecision = hasFailedMandatory
+                        ? "Recommended for Rejection"
+                        : hasPartialOrMissing
+                        ? "Pending Manual Review"
+                        : "Recommended for Acceptance";
 
                     sessionStorage.setItem("meditender_evaluations", JSON.stringify(globalEvaluations));
                     generateBIDashboard();
