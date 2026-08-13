@@ -200,35 +200,31 @@ namespace MediTender.API.Controllers
         }
 
         [HttpPost("update-plan")]
-        [Authorize]
+        [Authorize] 
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-                return Unauthorized();
-
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-            if (user == null)
-                return Unauthorized();
-
-            if (!string.IsNullOrWhiteSpace(request.Plan) && request.Plan.ToLowerInvariant() == "free")
+            if (request.Plan.ToLower() != "free")
             {
-                if (user.Plan == "free")
-                {
-                    return Ok(new
-                    {
-                        Message = "You're already on the Free plan. Free trial quota is granted once at signup and is not refreshed automatically to prevent abuse — please upgrade for more AI quota.",
-                        Refreshed = false
-                    });
-                }
-                else
-                {
-                    return BadRequest(new { Message = $"You are currently on the '{user.Plan}' plan. You cannot downgrade to the free trial." });
-                }
+                return BadRequest(new { Message = "Unauthorized plan update. Paid subscriptions must be processed via the secure payment gateway." });
             }
 
-            return BadRequest(new { Message = "Unauthorized action. Paid plans can only be activated through the secure payment gateway." });
-        }
+            var tokenEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            if (string.IsNullOrEmpty(tokenEmail) || tokenEmail != request.Email)
+            {
+                return Unauthorized(new { Message = "Invalid or unauthorized request." });
+            }
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null) return NotFound(new { Message = "User not found." });
+
+            user.Plan = "free";
+            user.QuotaPoints = Models.BillingConstants.FreeTrialQuota; 
+            
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { Message = "Free trial activated successfully.", Plan = user.Plan, QuotaPoints = user.QuotaPoints });
+        }        
+        
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> Me()
@@ -380,10 +376,7 @@ namespace MediTender.API.Controllers
     }
     public class UpdatePlanRequest
     {
-        [Required]
+        public string Email { get; set; } = string.Empty;
         public string Plan { get; set; } = string.Empty;
-        
-        [Required]
-        public int QuotaPoints { get; set; }
     }
 }
