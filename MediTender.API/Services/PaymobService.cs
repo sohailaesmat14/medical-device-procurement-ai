@@ -110,7 +110,12 @@ namespace MediTender.API.Services
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(requestString));
             var calculatedHmac = BitConverter.ToString(hash).Replace("-", "").ToLower();
 
-            return calculatedHmac == receivedHmac.ToLower();
+            if (string.IsNullOrEmpty(receivedHmac)) return false;
+
+            var calculatedBytes = Encoding.UTF8.GetBytes(calculatedHmac);
+            var receivedBytes = Encoding.UTF8.GetBytes(receivedHmac.ToLower());
+
+            return CryptographicOperations.FixedTimeEquals(calculatedBytes, receivedBytes);
         }
 
         private async Task<JsonElement> PostAsync(string url, object payload)
