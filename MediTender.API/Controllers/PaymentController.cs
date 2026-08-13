@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using MediTender.API.Services;
 using MediTender.API.Data;
 using MediTender.API.Models;
@@ -26,6 +27,7 @@ namespace MediTender.API.Controllers
 
         [HttpPost("initiate")]
         [Authorize]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> InitiatePayment([FromBody] PaymentRequest request)
         {
             var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
@@ -113,14 +115,14 @@ namespace MediTender.API.Controllers
                                 user.Plan = "monthly";
                             }
                             
-                            user.QuotaPoints += Models.BillingConstants.MonthlyQuota;
+                            user.QuotaPoints = Models.BillingConstants.MonthlyQuota;
                             user.SubscriptionExpiresAt = baseDate.AddMonths(1);
                             planUpdated = true;
                         }
                         else if (amountCents == (int)(Models.BillingConstants.AnnualPlanPrice * 100))
                         {
                             user.Plan = "annually";
-                            user.QuotaPoints += Models.BillingConstants.AnnualQuota;
+                            user.QuotaPoints = Models.BillingConstants.AnnualQuota;
                             user.SubscriptionExpiresAt = baseDate.AddYears(1);
                             planUpdated = true;
                         }
@@ -171,7 +173,7 @@ namespace MediTender.API.Controllers
             }
 
             return Ok(); 
-        }    
+        }
     }
 
     public class PaymentRequest
