@@ -31,6 +31,10 @@ namespace MediTender.API.Services
             {
                 filter.Must.Add(new Condition { Field = new FieldCondition { Key = "vendorName", Match = new Match { Keyword = vendorName } } });
             }
+            else
+            {
+                filter.Must.Add(new Condition { Field = new FieldCondition { Key = "documentType", Match = new Match { Keyword = "Standard" } } });
+            }
 
             var searchResults = await _qdrantClient.SearchAsync(
                 collectionName: _collectionName,
