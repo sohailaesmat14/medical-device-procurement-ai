@@ -161,7 +161,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while answering the question. Please try again." });
             }
         }
-        
+
         public class QuestionRequest 
         { 
             public string Question { get; set; } = string.Empty; 
@@ -175,7 +175,7 @@ namespace MediTender.API.Controllers
             if (request.VendorNames == null || !request.VendorNames.Any())
                 return BadRequest("Vendor names list cannot be empty.");
 
-            int userId = GetCurrentUserId(); // This is already here
+            int userId = GetCurrentUserId();
             var tender = await _dbContext.Tenders.FirstOrDefaultAsync(t => t.Id == request.TenderId && t.UserId == userId, cancellationToken);
             if (tender == null)
                 return StatusCode(403, new { Message = "Access denied to this tender." });
@@ -187,6 +187,14 @@ namespace MediTender.API.Controllers
             }
 
             request.VendorNames = request.VendorNames.Select(v => v.Trim()).ToList();
+
+            var dbRequirements = await _dbContext.Standards
+                .Where(s => s.TenderId == request.TenderId)
+                .ToListAsync(cancellationToken);
+
+            if (!dbRequirements.Any())
+                return BadRequest("No standard requirements found for this tender. Please run the extraction phase first.");
+
             int cost = request.VendorNames.Count * BillingConstants.PerVendorCost;
             
             var quotaResult = await TryConsumeQuotaAsync(cost);
@@ -197,13 +205,6 @@ namespace MediTender.API.Controllers
 
             try
             {
-                var dbRequirements = await _dbContext.Standards
-                    .Where(s => s.TenderId == request.TenderId)
-                    .ToListAsync(cancellationToken);
-
-                if (!dbRequirements.Any())
-                    return BadRequest("No standard requirements found for this tender. Please run the extraction phase first.");
-
                 var results = await comparisonService.CompareVendorsAsync(request.TenderId, userId, dbRequirements, request.VendorNames, cancellationToken);
 
                 int failedVendorsCount = results.Count(r => r.FinalDecision != null && r.FinalDecision.StartsWith("Error"));
@@ -259,24 +260,27 @@ namespace MediTender.API.Controllers
             {
                 var requirements = await extractionService.ExtractRequirementsAsync(request.FileName, request.TenderId, cancellationToken);
                 
-                // Return successfully without needing to refund anything
+                if (requirements == null || !requirements.Any())
+                {
+                    await RefundQuotaAsync(extractionCost);
+                    return BadRequest("No requirements could be extracted from the provided document.");
+                }
+
                 return Ok(requirements);
             }
             catch (OperationCanceledException)
             {
-                // Only refund the 10 points if the client disconnected or canceled
                 await RefundQuotaAsync(extractionCost);
                 return StatusCode(499, "Client closed the request.");
             }
             catch (Exception ex)
             {
-                // Only refund the 10 points if a server error occurred
                 await RefundQuotaAsync(extractionCost);
                 _logger.LogError(ex, "Error extracting standard requirements for Tender: {TenderId}, File: {FileName}", request.TenderId, request.FileName);
                 return StatusCode(500, new { Message = "An internal server error occurred while extracting requirements." });
             }
-        }
-        
+        }        
+
         [HttpDelete("reset-system")]
         [Authorize(Roles = "Committee")]
         public async Task<IActionResult> ResetSystem(
