@@ -186,9 +186,18 @@ namespace MediTender.API.Controllers
                 if (!dbRequirements.Any())
                     return BadRequest("No standard requirements found for this tender. Please run the extraction phase first.");
 
-                // 3. Pass 'userId' as the second parameter
                 var results = await comparisonService.CompareVendorsAsync(request.TenderId, userId, dbRequirements, request.VendorNames, cancellationToken);
+
+                int failedVendorsCount = results.Count(r => r.FinalDecision != null && r.FinalDecision.StartsWith("Error"));
+                if (failedVendorsCount > 0)
+                {
+                    int refundAmount = failedVendorsCount * 15;
+                    await RefundQuotaAsync(refundAmount);
+                    _logger.LogWarning("Refunded {RefundAmount} points for {FailedCount} failed vendor evaluations in Tender {TenderId}.", refundAmount, failedVendorsCount, request.TenderId);
+                }
+
                 return Ok(results);
+                                
             }
             catch (OperationCanceledException)
             {
