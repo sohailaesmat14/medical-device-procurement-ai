@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
-
+using Grpc.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,9 +54,6 @@ builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
     return HttpPolicyExtensions
         .HandleTransientHttpError()
         .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-        // FIX: Previous formula (30 + 2^retryAttempt) meant a worst-case wait of
-        // ~3.5 minutes across 5 retries before the caller ever got a response,
-        // leaving users staring at a spinner. Standard capped exponential backoff instead.
         .WaitAndRetryAsync(5, retryAttempt =>
             TimeSpan.FromSeconds(Math.Min(2 * Math.Pow(2, retryAttempt), 20)),
             onRetry: (outcome, timespan, retryAttempt, context) =>
@@ -78,7 +75,7 @@ builder.Services.AddSingleton(qdrantClient);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = 104857600; // 100 MB
+    options.Limits.MaxRequestBodySize = 104857600; 
 });
 
 
@@ -146,17 +143,26 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var qClient = scope.ServiceProvider.GetRequiredService<QdrantClient>();
-    try 
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
     {
-        await qClient.GetCollectionInfoAsync("meditender_collection_v2");
+        try 
+        {
+            await qClient.GetCollectionInfoAsync("meditender_collection_v2");
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            await qClient.CreateCollectionAsync("meditender_collection_v2", new Qdrant.Client.Grpc.VectorParams { Size = 3072, Distance = Qdrant.Client.Grpc.Distance.Cosine });
+            await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "fileName", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
+            await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "documentType", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
+            await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "vendorName", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
+            await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "tenderId", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
+        }
     }
-    catch 
+    catch (Exception ex)
     {
-        await qClient.CreateCollectionAsync("meditender_collection_v2", new Qdrant.Client.Grpc.VectorParams { Size = 3072, Distance = Qdrant.Client.Grpc.Distance.Cosine });
-        await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "fileName", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
-        await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "documentType", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
-        await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "vendorName", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
-        await qClient.CreatePayloadIndexAsync("meditender_collection_v2", "tenderId", Qdrant.Client.Grpc.PayloadSchemaType.Keyword);
+        logger.LogError(ex, "Qdrant initialization failed during startup. The application will continue running, but vector operations may fail.");
     }
 }
 
