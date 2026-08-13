@@ -36,7 +36,7 @@ namespace MediTender.API.Services
                 
                 await _qdrantClient.CreateCollectionAsync(
                     collectionName: _collectionName,
-                    vectorsConfig: new VectorParams { Size = 768, Distance = Distance.Cosine } 
+                    vectorsConfig: new VectorParams { Size = 3072, Distance = Distance.Cosine } 
                 );
             }
             catch (Exception ex)
