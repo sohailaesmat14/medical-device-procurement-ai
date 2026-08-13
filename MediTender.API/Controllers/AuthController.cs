@@ -219,7 +219,10 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "Unauthorized plan update. Paid subscriptions must be processed via the secure payment gateway." });
             }
 
-            var tokenEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var tokenEmail = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value 
+                          ?? User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value 
+                          ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier && c.Value.Contains("@"))?.Value;
+
             if (string.IsNullOrEmpty(tokenEmail) || tokenEmail != request.Email)
             {
                 return Unauthorized(new { Message = "Invalid or unauthorized request." });
@@ -241,7 +244,10 @@ namespace MediTender.API.Controllers
         [Authorize]
         public async Task<IActionResult> Me()
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value 
+                         ?? User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value 
+                         ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier && c.Value.Contains("@"))?.Value;
+
             if (string.IsNullOrEmpty(userEmail))
                 return Unauthorized();
 
@@ -266,6 +272,7 @@ namespace MediTender.API.Controllers
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim("FullName", user.FullName),
                 new Claim("Plan", user.Plan),

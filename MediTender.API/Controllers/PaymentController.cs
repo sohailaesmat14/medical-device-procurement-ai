@@ -6,7 +6,8 @@ using MediTender.API.Data;
 using MediTender.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Microsoft.Extensions.Logging; 
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 
 namespace MediTender.API.Controllers
 {
@@ -32,7 +33,9 @@ namespace MediTender.API.Controllers
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> InitiatePayment([FromBody] PaymentRequest request)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value 
+                         ?? User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value 
+                         ?? User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier && c.Value.Contains("@"))?.Value;
 
             if (string.IsNullOrEmpty(userEmail))
             {

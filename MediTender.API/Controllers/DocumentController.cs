@@ -34,10 +34,12 @@ namespace MediTender.API.Controllers
 
         private int GetCurrentUserId()
         {
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdStr, out int userId))
+            foreach (var claim in User.Claims)
             {
-                return userId;
+                if ((claim.Type == System.Security.Claims.ClaimTypes.NameIdentifier || claim.Type == "nameid") && int.TryParse(claim.Value, out int userId))
+                {
+                    return userId;
+                }
             }
             return 0;
         }
@@ -352,8 +354,8 @@ namespace MediTender.API.Controllers
             if (User.IsInRole("Committee"))
                 return (true, 9999, string.Empty);
 
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdStr, out int userId))
+            int userId = GetCurrentUserId();
+            if (userId == 0)
                 return (false, 0, "Invalid user token.");
 
             using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -390,12 +392,14 @@ namespace MediTender.API.Controllers
                 throw;
             }
         }        
+        
+        
         private async Task RefundQuotaAsync(int amount)
         {
             if (User.IsInRole("Committee")) return;
 
-            var userIdStr = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdStr, out int userId)) return;
+            int userId = GetCurrentUserId();
+            if (userId == 0) return;
 
             using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
@@ -414,6 +418,7 @@ namespace MediTender.API.Controllers
                 throw;
             }
         }
+
 
         [HttpPost("check-quota")]
         public async Task<IActionResult> CheckQuota([FromBody] QuotaRequest request)
