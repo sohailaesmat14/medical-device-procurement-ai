@@ -81,7 +81,11 @@ namespace MediTender.API.Controllers
 
             var passwordHasher = new PasswordHasher<ApplicationUser>();
             user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-            user.Role = request.Email.EndsWith("@meditender.gov.eg") ? "Committee" : "Vendor";
+            var expectedSecret = _configuration["SecuritySettings:CommitteeSecret"];
+            bool isCommitteeEmail = request.Email.EndsWith("@meditender.gov.eg");
+            bool hasValidSecret = !string.IsNullOrEmpty(request.CommitteeSecret) && request.CommitteeSecret == expectedSecret;
+
+            user.Role = (isCommitteeEmail && hasValidSecret) ? "Committee" : "Vendor";
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
@@ -317,6 +321,8 @@ namespace MediTender.API.Controllers
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$", 
             ErrorMessage = "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.")]
         public string Password { get; set; } = string.Empty;
+
+        public string? CommitteeSecret { get; set; }
     }
 
     public class ResetPasswordRequest

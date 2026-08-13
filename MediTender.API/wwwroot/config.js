@@ -47,7 +47,7 @@ async function fetchWithTimeout(url, options = {}) {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(id);
         
-        if (response.status === 401) {
+        if (response.status === 401 && !url.includes('/api/Auth/')) {
             performLogout();
             return Promise.reject(new Error("Session expired. Please log in again."));
         }
