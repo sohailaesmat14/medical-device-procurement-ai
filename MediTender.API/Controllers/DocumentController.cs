@@ -77,12 +77,19 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return StatusCode(403, new { Message = "Access denied to this tender." });
 
+            var quotaResult = await TryConsumeQuotaAsync(5);
+            if (!quotaResult.Success)
+            {
+                return BadRequest(new { Message = quotaResult.Error });
+            }
+
             using var stream = request.File.OpenReadStream();
             byte[] header = new byte[4];
             var bytesRead = await stream.ReadAsync(header, 0, 4);
             
             if (bytesRead < 4 || header[0] != 0x25 || header[1] != 0x50 || header[2] != 0x44 || header[3] != 0x46)
             {
+                await RefundQuotaAsync(5);
                 return BadRequest("Invalid file format. Only genuine PDF files are permitted.");
             }
             stream.Position = 0; 
@@ -93,6 +100,7 @@ namespace MediTender.API.Controllers
 
                 if (string.IsNullOrWhiteSpace(extractedText) || extractedText.Trim().Length < 50)
                 {
+                    await RefundQuotaAsync(5);
                     return BadRequest("Error: The PDF contains no readable text. It appears to be a scanned image. Please use OCR software to make it text-searchable before uploading.");
                 }
 
@@ -100,6 +108,7 @@ namespace MediTender.API.Controllers
 
                 if (chunks == null || chunks.Count == 0)
                 {
+                    await RefundQuotaAsync(5);
                     return BadRequest("Error: The document text could not be processed into chunks. Please check the file format.");
                 }
                 
@@ -116,10 +125,12 @@ namespace MediTender.API.Controllers
             }
             catch (Exception ex)
             {
+                await RefundQuotaAsync(5);
                 _logger.LogError(ex, "Error uploading PDF for DocumentType: {DocumentType}, Vendor: {VendorName}", request.DocumentType, request.VendorName);
                 return StatusCode(500, new { Message = "An internal server error occurred while processing your request. Please try again later." });
             }
         }
+                
         
         [HttpPost("ask")]
         public async Task<IActionResult> AskQuestion([FromBody] QuestionRequest request, [FromServices] IRagService ragService)
@@ -489,6 +500,12 @@ namespace MediTender.API.Controllers
                 int userId = GetCurrentUserId();
                 if (userId == 0) return Unauthorized(new { Message = "Invalid user token." });
 
+                var quotaResult = await TryConsumeQuotaAsync(0);
+                if (!quotaResult.Success)
+                {
+                    return BadRequest(new { Message = quotaResult.Error });
+                }
+
                 var tender = new Tender 
                 { 
                     Title = $"Tender - {DateTime.UtcNow:yyyy-MM-dd HH:mm}", 
@@ -507,7 +524,7 @@ namespace MediTender.API.Controllers
                 return StatusCode(500, new { Message = "An internal server error occurred while creating the tender." });
             }
         }
-        
+
         public class OverrideRequest
         {
             public int TenderId { get; set; }
