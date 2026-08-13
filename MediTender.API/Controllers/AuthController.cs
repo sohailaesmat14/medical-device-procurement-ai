@@ -79,11 +79,10 @@ namespace MediTender.API.Controllers
                 FullName = request.FullName,
                 Email = request.Email,
                 Plan = "free",
-                QuotaPoints = 200,
+                QuotaPoints = BillingConstants.FreeTrialQuota,
                 SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7),
                 IsEmailVerified = false,
                 VerificationToken = verificationCode,
-                // 2. Add expiration time for the verification token (e.g., 24 hours)
                 TokenExpiration = DateTime.UtcNow.AddHours(24) 
             };
 

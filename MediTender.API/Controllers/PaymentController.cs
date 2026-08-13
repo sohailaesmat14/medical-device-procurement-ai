@@ -40,7 +40,7 @@ namespace MediTender.API.Controllers
                 return BadRequest(new { Message = "Invalid plan type." });
             }
 
-            decimal amount = request.PlanType == "monthly" ? 2500 : 22000;
+            decimal amount = request.PlanType == "monthly" ? BillingConstants.MonthlyPlanPrice : BillingConstants.AnnualPlanPrice;
 
             try
             {
@@ -84,18 +84,18 @@ namespace MediTender.API.Controllers
                     var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                     if (user != null)
                     {
-                        if (amountCents == 250000)
+                        if (amountCents == (int)(BillingConstants.MonthlyPlanPrice * 100))
                         {
                             user.Plan = "monthly";
-                            user.QuotaPoints += 2000;
+                            user.QuotaPoints += BillingConstants.MonthlyQuota;
                             user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
                                 ? user.SubscriptionExpiresAt.AddDays(30) 
                                 : DateTime.UtcNow.AddDays(30);
                         }
-                        else if (amountCents == 2200000) 
+                        else if (amountCents == (int)(BillingConstants.AnnualPlanPrice * 100)) 
                         {
                             user.Plan = "annually";
-                            user.QuotaPoints += 99999;
+                            user.QuotaPoints += BillingConstants.AnnualQuota;
                             user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
                                 ? user.SubscriptionExpiresAt.AddDays(365) 
                                 : DateTime.UtcNow.AddDays(365);

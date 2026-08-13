@@ -169,7 +169,7 @@ namespace MediTender.API.Controllers
             }
 
             request.VendorNames = request.VendorNames.Select(v => v.Trim()).ToList();
-            int cost = request.VendorNames.Count * 15;
+            int cost = request.VendorNames.Count * BillingConstants.PerVendorCost;
             
             var quotaResult = await TryConsumeQuotaAsync(cost);
             if (!quotaResult.Success)
@@ -230,9 +230,7 @@ namespace MediTender.API.Controllers
             if (tender == null)
                 return StatusCode(403, new { Message = "Access denied to this tender." });
 
-            // 1. Consume ONLY the cost of the extraction phase (10 points).
-            // The Comparison phase will naturally handle its own cost in the CompareVendors endpoint.
-            int extractionCost = 10;
+            int extractionCost = BillingConstants.ExtractionCost;
             var quotaResult = await TryConsumeQuotaAsync(extractionCost);
             if (!quotaResult.Success)
             {
@@ -404,7 +402,7 @@ namespace MediTender.API.Controllers
             if (User.IsInRole("Committee"))
                 return Ok(new { Success = true, RemainingQuota = 9999 });
 
-            int cost = request.VendorCount * 15;
+            int cost = request.VendorCount * BillingConstants.PerVendorCost;
             int userId = GetCurrentUserId();
             
             if (userId == 0)
