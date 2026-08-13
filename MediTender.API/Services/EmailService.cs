@@ -22,14 +22,14 @@ namespace MediTender.API.Services
             var senderEmail = _configuration["EmailSettings:Email"];
             var senderPassword = _configuration["EmailSettings:Password"];
 
-            var client = new SmtpClient("smtp.gmail.com", 587)
+            using var client = new SmtpClient("smtp.gmail.com", 587)
             {
                 EnableSsl = true,
                 UseDefaultCredentials = false,
                 Credentials = new NetworkCredential(senderEmail, senderPassword)
             };
 
-            var mailMessage = new MailMessage(from: senderEmail!, to: toEmail, subject, body)
+            using var mailMessage = new MailMessage(from: senderEmail!, to: toEmail, subject, body)
             {
                 IsBodyHtml = true
             };

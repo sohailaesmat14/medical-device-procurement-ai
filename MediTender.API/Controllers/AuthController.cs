@@ -116,7 +116,7 @@ namespace MediTender.API.Controllers
                 await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
                 return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _dbContext.Users.Remove(user);
                 await _dbContext.SaveChangesAsync();
