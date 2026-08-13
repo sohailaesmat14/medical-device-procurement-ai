@@ -57,16 +57,38 @@ namespace MediTender.API.Controllers
         [HttpPost("webhook")]
         public async Task<IActionResult> PaymobWebhook([FromQuery] string hmac, [FromBody] JsonElement payload)
         {
-            if (!_paymobService.VerifyHmac(hmac, payload.GetRawText()))
+            bool isValidHmac = false;
+            bool success = false;
+            string orderId = "";
+            string userEmail = "";
+            int amountCents = 0;
+
+            try
+            {
+                isValidHmac = _paymobService.VerifyHmac(hmac, payload.GetRawText());
+
+                var obj = payload.GetProperty("obj");
+                success = obj.GetProperty("success").GetBoolean();
+                orderId = obj.GetProperty("order").GetProperty("id").GetRawText();
+                
+                if (success)
+                {
+                    userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString() ?? string.Empty;
+                    amountCents = obj.GetProperty("amount_cents").GetInt32();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Webhook payload parsing error: {Message}. Payload might be missing expected fields.", ex.Message);
+                return Unauthorized(new { Message = "Invalid payload structure or HMAC verification failed." });
+            }
+
+            if (!isValidHmac)
             {
                 _logger.LogWarning("Unauthorized webhook attempt. Invalid HMAC signature.");
                 return Unauthorized();
             }
 
-            var obj = payload.GetProperty("obj");
-            var success = obj.GetProperty("success").GetBoolean();
-            var orderId = obj.GetProperty("order").GetProperty("id").GetRawText();
-            
             if (success)
             {
                 using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -77,9 +99,6 @@ namespace MediTender.API.Controllers
                     {
                         return Ok();
                     }
-
-                    var userEmail = obj.GetProperty("order").GetProperty("billing_data").GetProperty("email").GetString();
-                    var amountCents = obj.GetProperty("amount_cents").GetInt32();
 
                     var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                     if (user != null)
@@ -145,7 +164,7 @@ namespace MediTender.API.Controllers
             }
 
             return Ok(); 
-        }
+        }    
     }
 
     public class PaymentRequest
