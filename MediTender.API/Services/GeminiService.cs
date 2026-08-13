@@ -80,7 +80,14 @@ namespace MediTender.API.Services
 
             var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
             using var doc = JsonDocument.Parse(responseString);
-            return doc.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? "";
+            if (doc.RootElement.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+            {
+                return candidates[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString() ?? "";
+            }
+
+            _logger.LogWarning("Gemini API request was blocked by safety filters or returned an empty response. Full response: {Response}", doc.RootElement.GetRawText());
+
+            throw new Exception("Gemini API request was blocked by safety filters or returned an empty response.");
         }   
 
         public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
