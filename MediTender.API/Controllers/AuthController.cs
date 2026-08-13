@@ -175,32 +175,37 @@ namespace MediTender.API.Controllers
 
             return Ok(new { Message = "Password has been reset successfully. You can now login." });
         }
+        
         [HttpPost("update-plan")]
         [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
         {
-            // NOTE: By design, this endpoint intentionally does NOT reset or refresh
-            // QuotaPoints/SubscriptionExpiresAt for the "free" plan — that is a one-time
-            // benefit granted at signup, and re-granting it on demand would let anyone
-            // get unlimited free quota by repeatedly hitting this endpoint. Paid plans
-            // can only be activated by the Payment webhook after a verified transaction.
-            // FIX: the response message previously implied the click "worked" and quota
-            // may have changed, which is misleading since nothing is actually updated here.
+            var userEmail = User.Claims.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            if (string.IsNullOrEmpty(userEmail))
+                return Unauthorized();
+
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
+            if (user == null)
+                return Unauthorized();
+
             if (!string.IsNullOrWhiteSpace(request.Plan) && request.Plan.ToLowerInvariant() == "free")
             {
-                return Ok(new
+                if (user.Plan == "free")
                 {
-                    Message = "You're already on the Free plan. Free trial quota is granted once at signup and is not refreshed automatically to prevent abuse — please upgrade for more AI quota.",
-                    Refreshed = false
-                });
+                    return Ok(new
+                    {
+                        Message = "You're already on the Free plan. Free trial quota is granted once at signup and is not refreshed automatically to prevent abuse — please upgrade for more AI quota.",
+                        Refreshed = false
+                    });
+                }
+                else
+                {
+                    return BadRequest(new { Message = $"You are currently on the '{user.Plan}' plan. You cannot downgrade to the free trial." });
+                }
             }
 
             return BadRequest(new { Message = "Unauthorized action. Paid plans can only be activated through the secure payment gateway." });
         }
-
-        // FIX: Added so the frontend has an authoritative source of truth for the
-        // user's actual plan/quota/subscription status, instead of guessing from
-        // client-side query params (see payment-callback.html) or stale session data.
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> Me()
