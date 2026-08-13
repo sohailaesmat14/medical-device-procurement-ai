@@ -48,14 +48,20 @@ namespace MediTender.API.Controllers
                         return Unauthorized(new { Message = "Please verify your email before logging in." });
                     }
 
+                    if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
+                    {
+                        user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+                        await _dbContext.SaveChangesAsync();
+                    }
+
                     var token = GenerateJwtToken(user);
                     return Ok(new { Token = token, Message = "Login Successful", Plan = user.Plan, FullName = user.FullName });
                 }
             }
 
             return Unauthorized(new { Message = "Invalid email or password" });
-        }        
-        
+        }
+
         [HttpPost("signup")]
         [EnableRateLimiting("LoginPolicy")] // FIX: signup had no rate limiting at all, allowing unlimited free-trial account creation
         public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
