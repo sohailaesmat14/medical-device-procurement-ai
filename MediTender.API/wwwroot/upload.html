@@ -561,13 +561,16 @@
                     );
                     return;
                 }
-                if (standardFile.size > MAX_FILE_SIZE) {
-                    showCustomModal(
-                        "File Too Large",
-                        "The Standard Specifications file exceeds the 100MB limit.",
-                        false,
-                    );
-                    return;
+                for (let i = 0; i < vendorQueue.length; i++) {
+                    const v = vendorQueue[i];
+                    if (v.techFile.size > MAX_FILE_SIZE || v.finFile.size > MAX_FILE_SIZE) {
+                        showCustomModal(
+                            "File Too Large",
+                            `One or more files for vendor '${escapeHTML(v.name)}' exceed the 100MB limit.`,
+                            false
+                        );
+                        return;
+                    }
                 }
 
                 let expectedCost = vendorQueue.length * 15;
@@ -699,7 +702,7 @@
                             body: vFinFormData,
                             timeout: 300000 // 5 minutes
                         });
-                        
+
                         if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
                         updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
 

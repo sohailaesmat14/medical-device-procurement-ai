@@ -171,11 +171,9 @@
         <header>
             <div class="header-left">
                 <div class="user-profile">
-                    <div class="avatar">SE</div>
+                    <div class="avatar" id="userAvatar">U</div>
                     <div class="user-details">
-                        <strong>Eng. Suhaila</strong><br /><small
-                            >Biomedical Tendering</small
-                        >
+                        <strong id="userNameDisplay">User Name</strong><br />
                     </div>
                 </div>
                 <div class="hospital-badge">🏥 Hospital</div>
@@ -237,6 +235,18 @@
             let currentStep = sessionStorage.getItem("meditender_current_step") || "extract"; 
 
             document.addEventListener("DOMContentLoaded", () => {
+                const userName = sessionStorage.getItem("user_name") || "Committee Member";
+                const nameDisplay = document.getElementById("userNameDisplay");
+                const avatarDisplay = document.getElementById("userAvatar");
+                
+                if (nameDisplay) nameDisplay.innerText = userName;
+                if (avatarDisplay) {
+                    avatarDisplay.innerText = userName.split(' ')
+                                            .map(n => n[0])
+                                            .join('')
+                                            .substring(0, 2)
+                                            .toUpperCase();
+                }
                 
                 async function startProcessing() {
                     const standardFile = sessionStorage.getItem("meditender_standard_file");
