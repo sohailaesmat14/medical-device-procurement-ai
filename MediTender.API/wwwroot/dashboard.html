@@ -362,8 +362,6 @@
                 try {
                     globalEvaluations = JSON.parse(rawData);
                     generateBIDashboard();
-
-                    setTimeout(populateVendorFilter, 500);
                 } catch (e) {
                     document.getElementById("dashboardContent").innerHTML =
                         "<h2 style='text-align:center; color:red;'>Data Error. Please re-run the analysis.</h2>";
@@ -888,6 +886,7 @@
                 renderScatterChart();
                 renderStatusDistributionChart();
                 renderTotalScoreChart();
+                populateVendorFilter();
             }
 
             window.triggerVendorOverrideModal = function (vendorName) {
