@@ -34,8 +34,6 @@
                 margin: 30px auto;
                 padding: 0 20px;
             }
-
-            /* Executive Summary & Badges */
             .summary-card {
                 background: linear-gradient(135deg, #1e293b, #334155);
                 color: white;
@@ -52,8 +50,6 @@
                 font-size: 16px;
                 line-height: 1.6;
             }
-
-            /* BI Insights Grid */
             .insights-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -82,7 +78,6 @@
                 font-size: 13px;
                 color: #64748b;
             }
-
             .box-warning {
                 border-top-color: #f59e0b;
             }
@@ -92,8 +87,6 @@
             .box-success {
                 border-top-color: #10b981;
             }
-
-            /* Matrix Table */
             .matrix-container {
                 background: white;
                 padding: 25px;
@@ -125,7 +118,6 @@
                 font-weight: bold;
                 color: #334155;
             }
-
             .status-met {
                 color: #059669;
                 font-weight: bold;
@@ -150,7 +142,6 @@
                 border-radius: 4px;
                 font-size: 12px;
             }
-
             .price-tag {
                 font-size: 18px;
                 font-weight: bold;
@@ -192,7 +183,6 @@
             th.req-col {
                 z-index: 11;
             }
-
             .evidence-tooltip {
                 cursor: help;
                 margin-left: 5px;
@@ -218,7 +208,6 @@
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 pointer-events: none;
             }
-
             .dashboard-modal-overlay {
                 display: none;
                 position: fixed;
@@ -265,7 +254,6 @@
                 cursor: pointer;
                 font-weight: bold;
             }
-
             @media (max-width: 768px) {
                 .dashboard-controls {
                     flex-direction: column;
@@ -331,7 +319,6 @@
             </div>
         </div>
         <div class="container" id="dashboardContent">
-            <!-- Data will be injected here by JS -->
         </div>
 
         <script>
@@ -385,7 +372,6 @@
 
             function generateBIDashboard() {
                 const content = document.getElementById("dashboardContent");
-
                 const reqMap = {};
                 
                 const validEvaluation = globalEvaluations.find(ev => 
@@ -416,12 +402,11 @@
                     if (ev.totalPrice > 0) allPrices.push(ev.totalPrice);
 
                     ev.details.forEach((d) => {
+                        if (!reqMap[d.requirement]) return;
                         reqMap[d.requirement].vendorResults[ev.vendorName] = d;
                     });
                 });
 
-                // --- 2. BI Calculations ---
-                // A. Value for Money (Best Price for Accepted ONLY)
                 let fullyAccepted = acceptedVendors.filter(
                     (v) => v.finalDecision === "Recommended for Acceptance",
                 );
@@ -436,7 +421,6 @@
                         : 0;
                 const outlierThreshold = avgPrice * 0.6;
 
-                // B. Gap Analysis & Review Flags & Evidence Coverage
                 let gapCount = 0;
                 let reviewFlagsCount = 0;
                 let evidenceFound = 0;
@@ -480,7 +464,6 @@
                           )
                         : 0;
 
-                // --- 3. Executive Narrative ---
                 let narrative = `Based on the AI evaluation of ${globalEvaluations.length} vendors, `;
                 if (fullyAccepted.length > 0) {
                     narrative += `<strong>${fullyAccepted.length} vendors</strong> are currently recommended for acceptance. `;
@@ -492,7 +475,6 @@
                     narrative += `Warning: There are ${gapCount} specific requirements where ALL vendors failed or missed data.`;
                 }
 
-                // --- 4. Render HTML ---
                 let html = `
                 <div class="summary-card">
                     <h2> AI Executive Summary</h2>
@@ -680,13 +662,11 @@
                 </div>
             `;
                 content.innerHTML = html;
-                // Function to render the Total Score Bar Chart
                 function renderTotalScoreChart() {
                     const ctx = document
                         .getElementById("totalScoreChart")
                         .getContext("2d");
 
-                    // Extract labels (Vendor Names) and data (Total Scores) from globalEvaluations
                     const vendorNames = globalEvaluations.map(
                         (ev) => ev.vendorName,
                     );
@@ -694,13 +674,12 @@
                         (ev) => ev.totalScore,
                     );
 
-                    // Define dynamic colors based on the final decision
                     const barColors = globalEvaluations.map((ev) => {
                         if (ev.finalDecision === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.7)"; // Green
+                            return "rgba(16, 185, 129, 0.7)"; 
                         if (ev.finalDecision === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.7)"; // Yellow/Orange
-                        return "rgba(239, 68, 68, 0.7)"; // Red
+                            return "rgba(245, 158, 11, 0.7)"; 
+                        return "rgba(239, 68, 68, 0.7)"; 
                     });
 
                     const borderColors = barColors.map((color) =>
@@ -734,14 +713,13 @@
                             },
                             plugins: {
                                 legend: {
-                                    display: false, // Hide legend since we only have one dataset
+                                    display: false, 
                                 },
                             },
                         },
                     });
                 }
 
-                // Function to render the Stacked Bar Chart for Status Distribution
                 function renderStatusDistributionChart() {
                     const ctx = document
                         .getElementById("statusDistributionChart")
@@ -836,7 +814,6 @@
                         .getElementById("valueForMoneyChart")
                         .getContext("2d");
 
-                    // Filter out vendors that do not have a financial offer yet (Price = 0 or N/A)
                     const scatterData = globalEvaluations
                         .filter((ev) => ev.totalPrice > 0)
                         .map((ev) => ({
@@ -848,13 +825,12 @@
 
                     if (scatterData.length === 0) return;
 
-                    // Assign colors based on the technical evaluation status
                     const pointColors = scatterData.map((d) => {
                         if (d.status === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.8)"; // Green
+                            return "rgba(16, 185, 129, 0.8)"; 
                         if (d.status === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.8)"; // Yellow
-                        return "rgba(239, 68, 68, 0.8)"; // Red
+                            return "rgba(245, 158, 11, 0.8)"; 
+                        return "rgba(239, 68, 68, 0.8)"; 
                     });
 
                     new Chart(ctx, {
@@ -967,7 +943,6 @@
                 }
             };
 
-                        
             function populateVendorFilter() {
                 const vendorSelect = document.getElementById("vendorFilter");
                 globalEvaluations.forEach((ev) => {
@@ -1134,6 +1109,7 @@
                         element.style.overflow = originalOverflow;
                     });
             }
+
             function updateVendorFinalDecision(vendor) {
                 vendor.totalScore = vendor.details.reduce((sum, d) => sum + d.score, 0);
                 
