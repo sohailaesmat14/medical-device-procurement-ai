@@ -246,7 +246,8 @@
     document.addEventListener("DOMContentLoaded", () => {
         const currentPlan = sessionStorage.getItem("meditender_plan");
         const freeBtn = document.querySelector('.btn-free');
-        if (currentPlan && freeBtn) {
+        
+        if (currentPlan === 'free' && freeBtn) {
             freeBtn.innerText = "Current Plan";
             freeBtn.disabled = true;
             freeBtn.style.backgroundColor = "#94a3b8";
