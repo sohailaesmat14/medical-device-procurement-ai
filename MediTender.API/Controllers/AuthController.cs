@@ -111,9 +111,17 @@ namespace MediTender.API.Controllers
                     <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
                 </div>
             </div>";
-            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
-
-            return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
+                return Ok(new { Message = "User created successfully. Please check your email to verify your account." });
+            }
+            catch (Exception ex)
+            {
+                _dbContext.Users.Remove(user);
+                await _dbContext.SaveChangesAsync();
+                return StatusCode(500, new { Message = "Account could not be created because the verification email failed to send. Please try again later." });
+            }
         }
 
         [HttpPost("verify-email")]
@@ -152,7 +160,15 @@ namespace MediTender.API.Controllers
             await _dbContext.SaveChangesAsync();
 
             var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
-            await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
+            
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "Reset Your Password", emailBody);
+            }
+            catch (Exception)
+            {
+                
+            }
 
             return Ok(new { Message = "If the email exists, a reset code will be sent." });
         }
@@ -175,7 +191,7 @@ namespace MediTender.API.Controllers
 
             return Ok(new { Message = "Password has been reset successfully. You can now login." });
         }
-        
+
         [HttpPost("update-plan")]
         [Authorize]
         public async Task<IActionResult> UpdatePlan([FromBody] UpdatePlanRequest request)
