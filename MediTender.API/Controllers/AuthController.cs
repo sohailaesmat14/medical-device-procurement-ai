@@ -29,6 +29,31 @@ namespace MediTender.API.Controllers
             _emailService = emailService;
         }
 
+        private string GetEmailTemplate(string title, string name, string message, string code, string expiryWarning)
+        {
+            return $@"
+            <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+                <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
+                    <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
+                </div>
+                <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
+                    <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>{title}</h2>
+                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{name}</strong>,</p>
+                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>{message}</p>
+                    
+                    <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
+                        <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{code}</span>
+                    </div>
+                    
+                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ {expiryWarning}</p>
+                </div>
+                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
+                    <p style='margin: 0;'>&copy; {DateTime.UtcNow.Year} MediTender Smart Assistant. All rights reserved.</p>
+                    <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
+                </div>
+            </div>";
+        }
+
         [HttpGet("billing-config")]
         [AllowAnonymous]
         public IActionResult GetBillingConfig()
@@ -60,7 +85,21 @@ namespace MediTender.API.Controllers
                 {
                     if (!user.IsEmailVerified)
                     {
-                        return Unauthorized(new { Message = "Please verify your email before logging in." });
+                        var newCode = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+                        user.VerificationToken = newCode;
+                        user.VerificationTokenExpiration = DateTime.UtcNow.AddHours(24);
+                        await _dbContext.SaveChangesAsync();
+
+                        var emailBody = GetEmailTemplate(
+                            "Verify Your Account", 
+                            user.FullName, 
+                            "Welcome back! To secure your account, please verify your email using the code below:", 
+                            newCode, 
+                            "This code will expire in 24 hours.");
+
+                        try { await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody); } catch { }
+
+                        return StatusCode(403, new { Message = "Email not verified. A new code has been sent.", RequiresVerification = true });
                     }
 
                     if (verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -110,27 +149,13 @@ namespace MediTender.API.Controllers
             _dbContext.Users.Add(user);
             await _dbContext.SaveChangesAsync();
 
-            var emailBody = $@"
-            <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
-                <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
-                    <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
-                </div>
-                <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
-                    <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>Verify Your Account</h2>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{user.FullName}</strong>,</p>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Welcome to the future of intelligent tendering. Please use the verification code below to complete your registration:</p>
-                    
-                    <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
-                        <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{verificationCode}</span>
-                    </div>
-                    
-                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ This code will expire in 24 hours.</p>
-                </div>
-                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
-                    <p style='margin: 0;'>&copy; {DateTime.Now.Year} MediTender Smart Assistant. All rights reserved.</p>
-                    <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
-                </div>
-            </div>";
+            var emailBody = GetEmailTemplate(
+                "Verify Your Account", 
+                user.FullName, 
+                "Welcome to the future of intelligent tendering. Please use the verification code below to complete your registration:", 
+                verificationCode, 
+                "This code will expire in 24 hours.");
+
             try
             {
                 await _emailService.SendEmailAsync(user.Email, "Verify Your Email", emailBody);
@@ -162,7 +187,6 @@ namespace MediTender.API.Controllers
             return Ok(new { Token = token, Message = "Email verified successfully!" });
         }
 
-
         [HttpPost("forgot-password")]
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
@@ -178,7 +202,12 @@ namespace MediTender.API.Controllers
             
             await _dbContext.SaveChangesAsync();
 
-            var emailBody = $"<h3>Password Reset</h3><p>Your password reset code is: <strong>{resetCode}</strong></p><p>This code expires in 15 minutes.</p>";
+            var emailBody = GetEmailTemplate(
+                "Reset Your Password", 
+                user.FullName, 
+                "We received a request to reset the password for your account. Please use the following code to proceed:", 
+                resetCode, 
+                "This code will expire in 15 minutes.");
             
             try
             {
@@ -186,7 +215,6 @@ namespace MediTender.API.Controllers
             }
             catch (Exception)
             {
-                
             }
 
             return Ok(new { Message = "If the email exists, a reset code will be sent." });
@@ -318,7 +346,13 @@ namespace MediTender.API.Controllers
 
             try
             {
-                var emailBody = $"<h3>MediProcure AI</h3><p>Your new verification code is: <strong>{newCode}</strong></p><p>This code expires in 24 hours.</p>";
+                var emailBody = GetEmailTemplate(
+                    "New Verification Code", 
+                    user.FullName, 
+                    "You requested a new verification code. Please use the following code to proceed:", 
+                    newCode, 
+                    "This code will expire in 24 hours.");
+
                 await _emailService.SendEmailAsync(user.Email, "New Verification Code", emailBody);
             }
             catch (Exception)

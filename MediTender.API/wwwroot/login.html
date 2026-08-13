@@ -118,7 +118,7 @@
             align-items: center;
         }
         .password-container input {
-            padding-right: 40px; /* Space for the toggle icon */
+            padding-right: 40px; 
         }
         .toggle-password {
             position: absolute;
@@ -194,12 +194,30 @@
                     sessionStorage.setItem("meditender_plan", data.plan);
                     window.location.replace("upload.html");
                 } else {
-                    errorMsg.innerText = "Invalid credentials. Try again.";
-                    errorMsg.style.display = "block";
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "Sign In";
+                    const errorData = await response.json().catch(() => ({}));
+                    
+                    if (response.status === 403 && errorData.requiresVerification) {
+                        sessionStorage.setItem("temp_user_email", user);
+                        errorMsg.className = "error-msg";
+                        errorMsg.style.backgroundColor = "#fef3c7";
+                        errorMsg.style.color = "#d97706";
+                        errorMsg.innerText = "Account not verified. Redirecting to verification...";
+                        errorMsg.style.display = "block";
+                        setTimeout(() => window.location.replace("verify-email.html"), 2000);
+                    } else {
+                        errorMsg.className = "error-msg";
+                        errorMsg.style.backgroundColor = "#fee2e2";
+                        errorMsg.style.color = "#dc2626";
+                        errorMsg.innerText = errorData.message || "Invalid credentials. Try again.";
+                        errorMsg.style.display = "block";
+                        loginBtn.disabled = false;
+                        loginBtn.innerText = "Sign In";
+                    }
                 }
             } catch (error) {
+                errorMsg.className = "error-msg";
+                errorMsg.style.backgroundColor = "#fee2e2";
+                errorMsg.style.color = "#dc2626";
                 errorMsg.innerText = "Server connection error.";
                 errorMsg.style.display = "block";
                 loginBtn.disabled = false;

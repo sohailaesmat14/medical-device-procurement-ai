@@ -18,7 +18,7 @@
             header {
                 background-color: #0f172a;
                 color: white;
-                padding: 15px 40px;
+                padding: 30px 40px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -326,6 +326,7 @@
                 window.location.replace("login.html");
             }
             let globalEvaluations = [];
+            let activeCharts = {};
 
             function escapeHTML(str) {
                 if (!str) return "";
@@ -361,10 +362,14 @@
 
                 try {
                     globalEvaluations = JSON.parse(rawData);
+                    if (!Array.isArray(globalEvaluations) || globalEvaluations.length === 0) {
+                        throw new Error("Invalid or empty evaluations data.");
+                    }
                     generateBIDashboard();
                 } catch (e) {
                     document.getElementById("dashboardContent").innerHTML =
-                        "<h2 style='text-align:center; color:red;'>Data Error. Please re-run the analysis.</h2>";
+                        `<h2 style='text-align:center; color:red;'>Data Error: ${escapeHTML(e.message)}. Please re-run the analysis.</h2>`;
+                    console.error("Dashboard Error:", e);
                 }
             });
 
@@ -373,10 +378,10 @@
                 const reqMap = {};
                 
                 const validEvaluation = globalEvaluations.find(ev => 
-                    ev.details && !(ev.details.length === 1 && ev.details[0].requirement === "System Error")
+                    ev.details && ev.details.length > 0 && !(ev.details.length === 1 && ev.details[0].requirement === "System Error")
                 );
 
-                const baseDetails = validEvaluation ? validEvaluation.details : globalEvaluations[0].details;
+                const baseDetails = validEvaluation ? validEvaluation.details : (globalEvaluations[0].details || []);
 
                 baseDetails.forEach((d) => {
                     reqMap[d.requirement] = {
@@ -399,7 +404,7 @@
                     }
                     if (ev.totalPrice > 0) allPrices.push(ev.totalPrice);
 
-                    ev.details.forEach((d) => {
+                    (ev.details || []).forEach((d) => {
                         if (!reqMap[d.requirement]) return;
                         reqMap[d.requirement].vendorResults[ev.vendorName] = d;
                     });
@@ -482,7 +487,7 @@
                 <div class="insights-grid">
                     <div class="insight-box box-success">
                         <h3>🏆 Value for Money (Accepted Only)</h3>
-                        <div class="insight-value">${bestValueVendor ? bestValueVendor.totalPrice.toLocaleString() + " EGP" : "N/A"}</div>
+                        <div class="insight-value">${bestValueVendor ? bestValueVendor.totalPrice.toLocaleString() + " EGP" : "Pending Approval"}</div>
                         <div class="insight-desc">${bestValueVendor ? escapeHTML(bestValueVendor.vendorName) : "Approve a vendor to see best price"}</div>
                     </div>
                     <div class="insight-box box-warning">
@@ -510,14 +515,6 @@
                     <div style="flex: 1; min-width: 400px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <h3 style="text-align: center; color: #334155;">Requirements Status Distribution</h3>
                         <canvas id="statusDistributionChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="charts-container" style="margin: 20px auto; width: 95%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <h3 style="text-align: center; color: #334155;">💎 Value for Money (Price vs. Technical Score)</h3>
-                    <p style="text-align: center; font-size: 12px; color: #64748b;">The best vendor will appear in the Top-Left corner (Highest Score & Lowest Price)</p>
-                    <div style="height: 400px; margin-top: 20px;">
-                        <canvas id="valueForMoneyChart"></canvas>
                     </div>
                 </div>
                 <div class="matrix-container">
@@ -577,7 +574,7 @@
                                         return `<th>
                                     <div style="font-size: 16px;">${escapeHTML(ev.vendorName)}</div>
                                     <div style="font-size:12px; font-weight:bold; color: ${statusColor}; margin: 5px 0;">${ev.finalDecision}</div>
-                                    <div class="price-tag">${ev.totalPrice > 0 ? ev.totalPrice.toLocaleString() + " EGP" : "N/A"}</div>
+                                    <div class="price-tag" style="font-size: 16px;">${ev.totalPrice > 0 ? ev.totalPrice.toLocaleString() + " EGP" : "<span style='color:#94a3b8; font-size:14px;'>Price Not Provided</span>"}</div>
                                     ${isOutlier}
                                     ${actionBtn}
                                 </th>`;
@@ -661,6 +658,7 @@
             `;
                 content.innerHTML = html;
                 function renderTotalScoreChart() {
+                    if (activeCharts.totalScore) activeCharts.totalScore.destroy();
                     const ctx = document
                         .getElementById("totalScoreChart")
                         .getContext("2d");
@@ -684,7 +682,7 @@
                         color.replace("0.7", "1"),
                     );
 
-                    new Chart(ctx, {
+                    activeCharts.totalScore = new Chart(ctx, {
                         type: "bar",
                         data: {
                             labels: vendorNames,
@@ -719,6 +717,7 @@
                 }
 
                 function renderStatusDistributionChart() {
+                    if (activeCharts.statusDist) activeCharts.statusDist.destroy();
                     const ctx = document
                         .getElementById("statusDistributionChart")
                         .getContext("2d");
@@ -738,7 +737,7 @@
                             notMentioned = 0,
                             notMet = 0;
 
-                        ev.details.forEach((d) => {
+                        (ev.details || []).forEach((d) => {
                             if (d.status === "Met") met++;
                             else if (d.status === "Partially Met") partial++;
                             else if (d.status === "Not Mentioned")
@@ -752,7 +751,7 @@
                         notMetCounts.push(notMet);
                     });
 
-                    new Chart(ctx, {
+                    activeCharts.statusDist = new Chart(ctx, {
                         type: "bar",
                         data: {
                             labels: vendorNames,
@@ -807,83 +806,6 @@
                     });
                 }
 
-                function renderScatterChart() {
-                    const ctx = document
-                        .getElementById("valueForMoneyChart")
-                        .getContext("2d");
-
-                    const scatterData = globalEvaluations
-                        .filter((ev) => ev.totalPrice > 0)
-                        .map((ev) => ({
-                            x: ev.totalPrice,
-                            y: ev.totalScore,
-                            vendorName: ev.vendorName,
-                            status: ev.finalDecision,
-                        }));
-
-                    if (scatterData.length === 0) return;
-
-                    const pointColors = scatterData.map((d) => {
-                        if (d.status === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.8)"; 
-                        if (d.status === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.8)"; 
-                        return "rgba(239, 68, 68, 0.8)"; 
-                    });
-
-                    new Chart(ctx, {
-                        type: "scatter",
-                        data: {
-                            datasets: [
-                                {
-                                    label: "Vendors",
-                                    data: scatterData,
-                                    backgroundColor: pointColors,
-                                    pointRadius: 10,
-                                    pointHoverRadius: 12,
-                                    borderColor: "#ffffff",
-                                    borderWidth: 2,
-                                },
-                            ],
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: "Total Financial Offer (EGP)",
-                                        font: { weight: "bold" },
-                                    },
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: "Total Technical Score",
-                                        font: { weight: "bold" },
-                                    },
-                                    beginAtZero: true,
-                                },
-                            },
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        label: function (context) {
-                                            const raw = context.raw;
-                                            return `${raw.vendorName} | Price: ${raw.x.toLocaleString()} EGP | Score: ${raw.y}`;
-                                        },
-                                    },
-                                },
-                                legend: {
-                                    display: false,
-                                },
-                            },
-                        },
-                    });
-                }
-
-                renderScatterChart();
                 renderStatusDistributionChart();
                 renderTotalScoreChart();
                 populateVendorFilter();
@@ -924,7 +846,7 @@
 
                     if (!response.ok) throw new Error(await response.text());
 
-                    vendor.details.forEach((d) => {
+                    (vendor.details || []).forEach((d) => {
                         if (d.isMandatory && (d.status === "Partially Met" || d.status === "Not Mentioned")) {
                             d.status = "Met";
                             d.evidence = "✅ Vendor manually approved by committee.";
@@ -988,7 +910,7 @@
 
                     if (!response.ok) throw new Error(await response.text());
 
-                    let detail = vendor.details.find((d) => d.requirement === reqText);
+                    let detail = (vendor.details || []).find((d) => d.requirement === reqText);
                     if (detail) {
                         detail.status = "Met";
                         detail.evidence = "✅ Manually verified by committee.";
@@ -1011,8 +933,22 @@
                 const vendorVal = document.getElementById("vendorFilter").value;
                 const mandatoryOnly = document.getElementById("mandatoryFilter").checked;
 
-                const tbody = document.querySelector(".matrix-container tbody");
+                const table = document.querySelector(".matrix-container table");
+                if (!table) return;
+
+                const thead = table.querySelector("thead tr");
+                const tbody = table.querySelector("tbody");
                 const rows = tbody.querySelectorAll("tr");
+
+                for (let i = 1; i < thead.cells.length; i++) {
+                    const currentVendor = globalEvaluations[i - 1].vendorName;
+                    const showCol = (vendorVal === "All" || currentVendor === vendorVal);
+                    thead.cells[i].style.display = showCol ? "" : "none";
+                    
+                    rows.forEach(row => {
+                        if(row.cells[i]) row.cells[i].style.display = showCol ? "" : "none";
+                    });
+                }
 
                 rows.forEach((row) => {
                     const reqText = row.cells[0].innerText.toLowerCase();
@@ -1020,42 +956,40 @@
 
                     let showRow = true;
 
-                    if (searchText && !reqText.includes(searchText)) {
-                        showRow = false;
-                    }
-
-                    if (mandatoryOnly && !isMandatory) {
-                        showRow = false;
-                    }
+                    if (searchText && !reqText.includes(searchText)) showRow = false;
+                    if (mandatoryOnly && !isMandatory) showRow = false;
 
                     let hasMatchingStatus = false;
 
                     for (let i = 1; i < row.cells.length; i++) {
-                        const currentVendor = globalEvaluations[i - 1].vendorName;
-
-                        if (vendorVal !== "All" && currentVendor !== vendorVal) {
-                            continue;
-                        }
+                        if (row.cells[i].style.display === "none") continue;
 
                         const statusSpan = row.cells[i].querySelector('span[class^="status-"]');
                         const exactStatus = statusSpan ? statusSpan.innerText.trim() : "";
+                        
+                        let cellMatchesStatus = false;
 
                         if (statusVal === "All") {
-                            hasMatchingStatus = true;
+                            cellMatchesStatus = true;
                         } else if (statusVal === "Met" && exactStatus === "Met") {
-                            hasMatchingStatus = true;
+                            cellMatchesStatus = true;
                         } else if (statusVal === "Partially Met" && exactStatus === "Partially Met") {
-                            hasMatchingStatus = true;
+                            cellMatchesStatus = true;
                         } else if (statusVal === "Not Mentioned" && exactStatus === "Not Mentioned") {
-                            hasMatchingStatus = true;
+                            cellMatchesStatus = true;
                         } else if (statusVal === "Not Met" && (exactStatus === "Not Met" || exactStatus === "Error")) {
+                            cellMatchesStatus = true;
+                        }
+
+                        if (cellMatchesStatus) {
                             hasMatchingStatus = true;
+                            row.cells[i].style.opacity = "1";
+                        } else {
+                            row.cells[i].style.opacity = statusVal === "All" ? "1" : "0.2";
                         }
                     }
 
-                    if (statusVal !== "All" && !hasMatchingStatus) {
-                        showRow = false;
-                    }
+                    if (!hasMatchingStatus && statusVal !== "All") showRow = false;
 
                     row.style.display = showRow ? "" : "none";
                 });
@@ -1110,12 +1044,12 @@
             }
 
             function updateVendorFinalDecision(vendor) {
-                vendor.totalScore = vendor.details.reduce((sum, d) => sum + d.score, 0);
+                vendor.totalScore = (vendor.details || []).reduce((sum, d) => sum + d.score, 0);
                 
-                let hasFailedMandatory = vendor.details.some(
+                let hasFailedMandatory = (vendor.details || []).some(
                     (d) => d.isMandatory && (d.status === "Not Met" || d.status === "Error")
                 );
-                let hasPartialOrMissing = vendor.details.some(
+                let hasPartialOrMissing = (vendor.details || []).some(
                     (d) => d.isMandatory && (d.status === "Partially Met" || d.status === "Not Mentioned")
                 );
 

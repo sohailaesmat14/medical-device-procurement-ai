@@ -151,14 +151,14 @@
             transition: background 0.3s;
         }
 
-        .subscribe-btn:hover {
+        .subscribe-btn:hover:not(:disabled) {
             background-color: #1d4ed8;
         }
 
         .btn-free {
             background-color: #0f172a;
         }
-        .btn-free:hover {
+        .btn-free:hover:not(:disabled) {
             background-color: #1e293b;
         }
 
@@ -170,7 +170,7 @@
             margin-top: 40px;
         }
         .subscribe-btn:disabled {
-            background-color: #94a3b8;
+            background-color: #94a3b8 !important;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -255,7 +255,7 @@
         }
     });
 
-    async function selectPlan(planType, buttonElement) {
+    async function selectPlan(planType, btnElement) {
         const email = sessionStorage.getItem("user_email");
         const token = sessionStorage.getItem("jwt_token");
 
@@ -272,7 +272,13 @@
         btnElement.innerText = "Processing... ⏳";
 
         const resetButtons = () => {
-            allBtns.forEach(btn => btn.disabled = false);
+            allBtns.forEach(btn => {
+                // Keep the free plan button disabled if the user is already on the free plan
+                if (btn.classList.contains('btn-free') && sessionStorage.getItem("meditender_plan") === 'free') {
+                    return;
+                }
+                btn.disabled = false;
+            });
             btnElement.innerText = originalText;
         };
 
@@ -289,11 +295,13 @@
 
                 if (response.ok) {
                     const data = await response.json().catch(() => ({}));
-                    showToast(data.message || "Redirecting...", "info");
+                    showToast(data.message || "Redirecting...", "success");
                     sessionStorage.removeItem("meditender_cached_quota");
+                    sessionStorage.setItem("meditender_plan", "free");
                     setTimeout(() => window.location.replace("upload.html"), 1500);
                 } else {
-                    showToast("Failed to update subscription plan.", "error");
+                    const errorData = await response.json().catch(() => ({}));
+                    showToast(errorData.message || "Failed to update subscription plan.", "error");
                     resetButtons();
                 }
                 
@@ -304,14 +312,15 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ email: email, planType: planType })
+                    body: JSON.stringify({ planType: planType })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     window.location.replace(data.checkoutUrl); 
                 } else {
-                    showToast("Failed to initiate payment.", "error");
+                    const errorData = await response.json().catch(() => ({}));
+                    showToast(errorData.message || "Failed to initiate payment.", "error");
                     resetButtons();
                 }
             }

@@ -330,16 +330,22 @@
                     />
                     <span id="techFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
 
-                    <label>Financial Offer PDF:</label>
-                    <input
-                        type="file"
-                        id="vendorFinFile"
-                        accept="application/pdf"
-                    />
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 15px; margin-bottom: 15px; cursor: pointer; color: #475569; font-weight: bold; font-size: 14px;">
+                        <input type="checkbox" id="skipFinFile" onchange="toggleFinFileInput()" style="width: auto; margin: 0;">
+                        Evaluate Technical Offer Only (Skip Financial)
+                    </label>
 
-                    <span id="finFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
+                    <div id="finFileInputContainer">
+                        <label>Financial Offer PDF:</label>
+                        <input
+                            type="file"
+                            id="vendorFinFile"
+                            accept="application/pdf"
+                        />
+                        <span id="finFileDisplay" style="font-size: 12px; color: #6b7280; display: block; margin-top: 4px;"></span>
+                    </div>
 
-                    <button class="add-btn" onclick="addVendor()">
+                    <button class="add-btn" onclick="addVendor()" style="margin-top: 15px;">
                         Add Vendor to Queue
                     </button>
                     <div class="vendor-list" id="vendorList">
@@ -383,6 +389,19 @@
                     return confirmationMessage;
                 }
             });
+
+            function toggleFinFileInput() {
+                const skipFin = document.getElementById("skipFinFile").checked;
+                const finContainer = document.getElementById("finFileInputContainer");
+                if (skipFin) {
+                    finContainer.style.display = "none";
+                    document.getElementById("vendorFinFile").value = "";
+                    document.getElementById("finFileDisplay").innerText = "";
+                } else {
+                    finContainer.style.display = "block";
+                }
+            }
+
             function showCustomModal(title, message, isConfirm, onConfirm) {
                 const modal = document.getElementById("customModal");
                 document.getElementById("modalTitle").innerText = title;
@@ -430,9 +449,15 @@
                 if (!vendor) return;
 
                 document.getElementById('vendorName').value = vendor.name;
+                document.getElementById('skipFinFile').checked = vendor.skipFin;
+                toggleFinFileInput();
                 
                 document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
-                document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
+                if (vendor.finFile) {
+                    document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
+                } else {
+                    document.getElementById('finFileDisplay').innerText = "";
+                }
 
                 const addBtn = document.querySelector('.add-btn');
                 if(addBtn) addBtn.innerText = "Update Vendor";
@@ -444,6 +469,7 @@
                 const nameInput = document.getElementById('vendorName').value.trim();
                 const techInput = document.getElementById('vendorTechFile'); 
                 const finInput = document.getElementById('vendorFinFile');
+                const skipFin = document.getElementById('skipFinFile').checked;
 
                 if (!nameInput) {
                     showToast("Please enter a vendor name.", "warning");
@@ -460,12 +486,19 @@
                     const vendorIndex = vendorQueue.findIndex(v => v.id === editingVendorId);
                     if (vendorIndex !== -1) {
                         vendorQueue[vendorIndex].name = nameInput;
+                        vendorQueue[vendorIndex].skipFin = skipFin;
                         
                         if (techInput.files.length > 0) {
                             vendorQueue[vendorIndex].techFile = techInput.files[0];
                         }
-                        if (finInput.files.length > 0) {
+                        
+                        if (skipFin) {
+                            vendorQueue[vendorIndex].finFile = null;
+                        } else if (finInput.files.length > 0) {
                             vendorQueue[vendorIndex].finFile = finInput.files[0];
+                        } else if (!vendorQueue[vendorIndex].finFile) {
+                            showToast("Please select a Financial file or check 'Skip Financial'.", "warning");
+                            return;
                         }
                     }
 
@@ -478,8 +511,8 @@
                     document.getElementById('finFileDisplay').innerText = "";
                     
                 } else {
-                    if (techInput.files.length === 0 || finInput.files.length === 0) {
-                        showToast("Please select both Technical and Financial files for the new vendor.", "warning");
+                    if (techInput.files.length === 0 || (!skipFin && finInput.files.length === 0)) {
+                        showToast("Please select both Technical and Financial files, or check 'Skip Financial'.", "warning");
                         return;
                     }
 
@@ -487,15 +520,19 @@
                         id: crypto.randomUUID(), 
                         name: nameInput,
                         techFile: techInput.files[0],
-                        finFile: finInput.files[0]
+                        finFile: skipFin ? null : finInput.files[0],
+                        skipFin: skipFin
                     });
                 }
 
                 document.getElementById('vendorName').value = "";
                 techInput.value = "";
                 finInput.value = "";
+                document.getElementById('skipFinFile').checked = false;
+                toggleFinFileInput();
                 updateVendorUI(); 
             }
+
             function escapeHTML(str) {
                 if (!str) return "";
                 return str
@@ -521,7 +558,7 @@
                     <div>
                         ✅ <strong>${escapeHTML(v.name)}</strong><br>
                         <span style="color: #64748b;">Tech:</span> ${escapeHTML(v.techFile.name)}<br>
-                        <span style="color: #64748b;">Fin:</span> ${escapeHTML(v.finFile.name)}
+                        <span style="color: #64748b;">Fin:</span> ${v.finFile ? escapeHTML(v.finFile.name) : '<i style="color: #94a3b8;">Skipped</i>'}
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button onclick="editVendor('${v.id}')" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
@@ -531,6 +568,7 @@
                     )
                     .join("");
             }
+
             function processUploads() {
                 const standardFile =
                     document.getElementById("standardFile").files[0];
@@ -553,7 +591,7 @@
                 }
                 for (let i = 0; i < vendorQueue.length; i++) {
                     const v = vendorQueue[i];
-                    if (v.techFile.size > MAX_FILE_SIZE || v.finFile.size > MAX_FILE_SIZE) {
+                    if (v.techFile.size > MAX_FILE_SIZE || (v.finFile && v.finFile.size > MAX_FILE_SIZE)) {
                         showCustomModal(
                             "File Too Large",
                             `One or more files for vendor '${escapeHTML(v.name)}' exceed the 100MB limit.`,
@@ -624,7 +662,7 @@
                     progressBar.style.backgroundColor = "#2563eb";
                     progressText.style.color = "#2563eb";
 
-                    let totalFiles = 1 + vendorQueue.length * 2;
+                    let totalFiles = 1 + vendorQueue.length + vendorQueue.filter(v => v.finFile).length;
                     let completedFiles = 0;
 
                     function updateProgress(stepMessage) {
@@ -677,24 +715,26 @@
                         if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
                         updateProgress(`Technical Offer for ${v.name} uploaded successfully.`);
 
-                        progressStep.innerText = `Uploading Financial offer for vendor: ${v.name}...`;
-                        const vFinFormData = new FormData();
-                        vFinFormData.append("file", v.finFile);
-                        vFinFormData.append("documentType", "FinancialOffer");
-                        vFinFormData.append("vendorName", v.name);
-                        vFinFormData.append("tenderId", currentTenderId);
+                        if (v.finFile) {
+                            progressStep.innerText = `Uploading Financial offer for vendor: ${v.name}...`;
+                            const vFinFormData = new FormData();
+                            vFinFormData.append("file", v.finFile);
+                            vFinFormData.append("documentType", "FinancialOffer");
+                            vFinFormData.append("vendorName", v.name);
+                            vFinFormData.append("tenderId", currentTenderId);
 
-                        let vFinRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
-                            method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                            body: vFinFormData,
-                            timeout: 300000
-                        });
+                            let vFinRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                                method: "POST",
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                },
+                                body: vFinFormData,
+                                timeout: 300000
+                            });
 
-                        if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
-                        updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
+                            if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
+                            updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
+                        }
 
                         uploadedVendorNames.push(v.name);
                     }

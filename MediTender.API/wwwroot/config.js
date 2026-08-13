@@ -76,7 +76,7 @@ async function fetchWithTimeout(url, options = {}) {
     }
 }
 
-function performLogout() {
+window.performLogout = function() {
     sessionStorage.clear();
     window.location.replace("login.html");
 }
@@ -95,21 +95,57 @@ window.togglePasswordVisibility = function (inputId, button) {
 document.addEventListener("DOMContentLoaded", async () => {
     const token = sessionStorage.getItem("jwt_token");
     const currentPage = window.location.pathname.toLowerCase();
+    
+    const isHomePage = currentPage.includes("home.html") || currentPage.includes("index.html") || currentPage === "/" || currentPage.endsWith("wwwroot/");
 
-    if (currentPage.includes("home.html") || currentPage === "/" || currentPage.endsWith("wwwroot/")) {
-        if (token) {
-            const actionButtons = document.querySelectorAll('a[href*="login.html"], a[href*="signup.html"]');
-            actionButtons.forEach(btn => {
-                btn.href = "upload.html";
-                btn.innerHTML = "Go to Dashboard";
-                btn.style.backgroundColor = "#10b981";
-                btn.style.color = "white";
-                btn.style.borderColor = "#10b981";
-            });
+    // --- HOME PAGE LOGIC ---
+    if (isHomePage && token) {
+        const userName = sessionStorage.getItem("user_name") || "Committee Member";
+        const initials = userName.trim().split(/\s+/).map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        // 1. Replace Top-Right Buttons (Sign In / Get Started) safely
+        const loginLink = Array.from(document.querySelectorAll('a')).find(a => 
+            a.innerText.trim() === 'Sign In' || (a.href && a.href.includes('login.html'))
+        );
+        const signupLink = Array.from(document.querySelectorAll('a')).find(a => 
+            a.innerText.trim() === 'Get Started' || (a.href && a.href.includes('signup.html'))
+        );
+
+        if (loginLink) {
+            const profileDiv = document.createElement('div');
+            profileDiv.style.cssText = 'display: flex; align-items: center; gap: 15px;';
+            profileDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);">
+                    <div style="background-color: #10b981; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px;">${initials}</div>
+                    <span style="font-weight: bold; font-size: 14px; color: white;">${userName}</span>
+                </div>
+                <a href="upload.html" style="background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s;">Dashboard 🚀</a>
+                <button onclick="performLogout()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 20px; padding: 0; margin-left: 5px;" title="Logout">🚪</button>
+            `;
+
+            if (signupLink && signupLink.parentElement === loginLink.parentElement) {
+                signupLink.replaceWith(profileDiv);
+                loginLink.remove();
+            } else {
+                loginLink.replaceWith(profileDiv);
+                if(signupLink) signupLink.remove();
+            }
         }
+
+        // 2. Update Hero Buttons ("Start Free Trial" -> "Go to Dashboard")
+        document.querySelectorAll('a').forEach(a => {
+            const text = a.innerText.trim().toLowerCase();
+            if (text === 'start free trial' || text === 'get started') {
+                a.href = "upload.html";
+                a.innerText = "Go to Dashboard 🚀";
+                a.style.backgroundColor = "#10b981"; // Optional: make it green to stand out
+                a.style.borderColor = "#10b981";
+            }
+        });
     }
 
-    if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !currentPage.includes("home.html")) {
+    // --- OTHER PAGES WIDGET LOGIC ---
+    if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !isHomePage) {
         let remainingQuota = sessionStorage.getItem("meditender_cached_quota");
 
         if (!remainingQuota) {
