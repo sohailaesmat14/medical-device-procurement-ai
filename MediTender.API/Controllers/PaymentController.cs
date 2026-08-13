@@ -104,6 +104,7 @@ namespace MediTender.API.Controllers
                     if (user != null)
                     {
                         bool planUpdated = false;
+                        DateTime baseDate = user.SubscriptionExpiresAt > DateTime.UtcNow ? user.SubscriptionExpiresAt : DateTime.UtcNow;
 
                         if (amountCents == (int)(Models.BillingConstants.MonthlyPlanPrice * 100))
                         {
@@ -113,12 +114,14 @@ namespace MediTender.API.Controllers
                             }
                             
                             user.QuotaPoints += Models.BillingConstants.MonthlyQuota;
+                            user.SubscriptionExpiresAt = baseDate.AddMonths(1);
                             planUpdated = true;
                         }
                         else if (amountCents == (int)(Models.BillingConstants.AnnualPlanPrice * 100))
                         {
                             user.Plan = "annually";
                             user.QuotaPoints += Models.BillingConstants.AnnualQuota;
+                            user.SubscriptionExpiresAt = baseDate.AddYears(1);
                             planUpdated = true;
                         }
                         else

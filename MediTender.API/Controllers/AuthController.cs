@@ -219,12 +219,13 @@ namespace MediTender.API.Controllers
 
             user.Plan = "free";
             user.QuotaPoints = Models.BillingConstants.FreeTrialQuota; 
+            user.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(7);
             
             await _dbContext.SaveChangesAsync();
 
             return Ok(new { Message = "Free trial activated successfully.", Plan = user.Plan, QuotaPoints = user.QuotaPoints });
-        }        
-        
+        }
+                
         [HttpGet("me")]
         [Authorize]
         public async Task<IActionResult> Me()
