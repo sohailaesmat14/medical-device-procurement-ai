@@ -84,32 +84,44 @@ namespace MediTender.API.Controllers
                     var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
                     if (user != null)
                     {
-                        if (amountCents == (int)(BillingConstants.MonthlyPlanPrice * 100))
+                        bool planUpdated = false;
+
+                        if (amountCents == (int)(Models.BillingConstants.MonthlyPlanPrice * 100))
                         {
                             user.Plan = "monthly";
-                            user.QuotaPoints += BillingConstants.MonthlyQuota;
-                            user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
-                                ? user.SubscriptionExpiresAt.AddDays(30) 
-                                : DateTime.UtcNow.AddDays(30);
+                            user.QuotaPoints += Models.BillingConstants.MonthlyQuota;
+                            planUpdated = true;
                         }
-                        else if (amountCents == (int)(BillingConstants.AnnualPlanPrice * 100)) 
+                        else if (amountCents == (int)(Models.BillingConstants.AnnualPlanPrice * 100))
                         {
                             user.Plan = "annually";
-                            user.QuotaPoints += BillingConstants.AnnualQuota;
-                            user.SubscriptionExpiresAt = user.SubscriptionExpiresAt > DateTime.UtcNow 
-                                ? user.SubscriptionExpiresAt.AddDays(365) 
-                                : DateTime.UtcNow.AddDays(365);
+                            user.QuotaPoints += Models.BillingConstants.AnnualQuota;
+                            planUpdated = true;
                         }
-                        
+                        else
+                        {
+                            _logger.LogCritical("CRITICAL: AMOUNT MISMATCH DETECTED! OrderId: {OrderId}, User: {Email}, Expected: {Monthly} or {Annual}, Received: {ReceivedCents}. User charged but NO PLAN ASSIGNED!", 
+                                orderId, user.Email, 
+                                (int)(Models.BillingConstants.MonthlyPlanPrice * 100), 
+                                (int)(Models.BillingConstants.AnnualPlanPrice * 100), 
+                                amountCents);
+                        }
+
                         _dbContext.PaymentTransactions.Add(new PaymentTransaction { OrderId = orderId });
                         await _dbContext.SaveChangesAsync();
                         await transaction.CommitAsync();
-                        
-                        _logger.LogInformation("Payment successful and plan updated for user {Email}. OrderId: {OrderId}", userEmail, orderId);
+
+                        if (planUpdated)
+                        {
+                            _logger.LogInformation("Payment successful and plan updated for user: {Email}", user.Email);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Payment recorded for OrderId: {OrderId}, but plan was NOT updated due to amount mismatch.", orderId);
+                        }
                     }
                     else
                     {
-                        // 2. Prevent Silent Money Loss: Log critical alert for orphaned payments
                         _logger.LogWarning(
                             "CRITICAL: ORPHAN PAYMENT DETECTED! OrderId: {OrderId}, Amount: {AmountCents} cents, Billed Email: {Email}. " +
                             "The payment was successful, but no matching user was found in the database. Manual reconciliation is required.", 
