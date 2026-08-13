@@ -107,7 +107,11 @@ namespace MediTender.API.Controllers
 
                         if (amountCents == (int)(Models.BillingConstants.MonthlyPlanPrice * 100))
                         {
-                            user.Plan = "monthly";
+                            if (user.Plan != "annually")
+                            {
+                                user.Plan = "monthly";
+                            }
+                            
                             user.QuotaPoints += Models.BillingConstants.MonthlyQuota;
                             planUpdated = true;
                         }
@@ -169,7 +173,6 @@ namespace MediTender.API.Controllers
 
     public class PaymentRequest
     {
-        public string Email { get; set; } = string.Empty;
         public string PlanType { get; set; } = string.Empty; 
     }
 }

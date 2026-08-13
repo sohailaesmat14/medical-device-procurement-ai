@@ -105,7 +105,7 @@
             const countdownInterval = setInterval(() => {
                 resendBtn.innerText = `Wait ${timeLeft}s`;
                 timeLeft--;
-                if (timeLeft < 0) {
+                if (timeLeft <= 0) {
                     clearInterval(countdownInterval);
                     resendBtn.innerText = "Resend Code";
                     resendBtn.disabled = false;
