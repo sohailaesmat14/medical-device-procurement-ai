@@ -34,26 +34,28 @@ namespace MediTender.API.Controllers
         [EnableRateLimiting("LoginPolicy")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Username);
 
             if (user != null)
             {
-                if (!user.IsEmailVerified)
-                    return Unauthorized(new { Message = "Please verify your email before logging in." });
-
                 var passwordHasher = new PasswordHasher<ApplicationUser>();
                 var verificationResult = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
 
                 if (verificationResult == PasswordVerificationResult.Success || verificationResult == PasswordVerificationResult.SuccessRehashNeeded)
                 {
+                    if (!user.IsEmailVerified)
+                    {
+                        return Unauthorized(new { Message = "Please verify your email before logging in." });
+                    }
+
                     var token = GenerateJwtToken(user);
                     return Ok(new { Token = token, Message = "Login Successful", Plan = user.Plan, FullName = user.FullName });
                 }
             }
 
             return Unauthorized(new { Message = "Invalid email or password" });
-        }       
+        }        
+        
         [HttpPost("signup")]
         [EnableRateLimiting("LoginPolicy")] // FIX: signup had no rate limiting at all, allowing unlimited free-trial account creation
         public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
