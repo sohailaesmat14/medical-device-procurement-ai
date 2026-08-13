@@ -10,6 +10,8 @@ using System.Text;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,7 +40,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IComparisonService, ComparisonService>();
 builder.Services.AddScoped<IStandardExtractionService, StandardExtractionService>();
-builder.Services.AddHttpClient<IPaymobService, PaymobService>();
+builder.Services.AddHttpClient<IPaymobService, PaymobService>()
+    .AddTransientHttpErrorPolicy(policyBuilder => 
+        policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(2)));
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddHttpClient<IGeminiService, GeminiService>(client =>
