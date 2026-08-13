@@ -386,9 +386,15 @@
             function generateBIDashboard() {
                 const content = document.getElementById("dashboardContent");
 
-                // --- 1. Data Preparation ---
                 const reqMap = {};
-                globalEvaluations[0].details.forEach((d) => {
+                
+                const validEvaluation = globalEvaluations.find(ev => 
+                    ev.details && !(ev.details.length === 1 && ev.details[0].requirement === "System Error")
+                );
+
+                const baseDetails = validEvaluation ? validEvaluation.details : globalEvaluations[0].details;
+
+                baseDetails.forEach((d) => {
                     reqMap[d.requirement] = {
                         text: d.requirement,
                         isMandatory: d.isMandatory,
