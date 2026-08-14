@@ -32,28 +32,65 @@ namespace MediTender.API.Controllers
         private string GetEmailTemplate(string title, string name, string message, string code, string expiryWarning)
         {
             return $@"
-            <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
-                <div style='background-color: #2563eb; padding: 25px; text-align: center;'>
-                    <h1 style='color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;'>MediProcure AI</h1>
-                </div>
-                <div style='padding: 40px 30px; background-color: #ffffff; color: #333333;'>
-                    <h2 style='color: #1e293b; margin-top: 0; font-size: 20px;'>{title}</h2>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>Hello <strong>{name}</strong>,</p>
-                    <p style='font-size: 16px; line-height: 1.6; color: #475569;'>{message}</p>
+            <!DOCTYPE html>
+            <html lang='en'>
+            <head>
+                <meta charset='utf-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            </head>
+            <body style='margin: 0; padding: 0; background-color: #f4f7f9; font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif;'>
+                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05);'>
+                    <!-- Header -->
+                    <tr>
+                        <td align='center' style='background: #0f172a; padding: 35px 20px;'>
+                            <h1 style='color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: 800;'>
+                                MediProcure <span style='color: #10b981;'>AI</span>
+                            </h1>
+                            <p style='color: #94a3b8; margin: 10px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;'>{title}</p>
+                        </td>
+                    </tr>
                     
-                    <div style='background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;'>
-                        <span style='font-size: 36px; font-weight: bold; color: #2563eb; letter-spacing: 8px;'>{code}</span>
-                    </div>
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 40px 30px;'>
+                            <p style='margin: 0 0 20px 0; font-size: 16px; color: #334155;'>Hello <strong>{name}</strong>,</p>
+                            <p style='margin: 0 0 30px 0; font-size: 16px; color: #475569; line-height: 1.6;'>
+                                {message}
+                            </p>
+                            
+                            <!-- Code Box -->
+                            <div style='background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 25px; text-align: center; margin-bottom: 30px;'>
+                                <span style='font-family: monospace; font-size: 34px; font-weight: 900; color: #2563eb; letter-spacing: 8px;'>
+                                    {code}
+                                </span>
+                            </div>
+                            
+                            <!-- Warning / Info Box -->
+                            <div style='background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px 20px; border-radius: 0 8px 8px 0;'>
+                                <p style='margin: 0; font-size: 14px; color: #991b1b; font-weight: 600;'>
+                                    ⚠️ {expiryWarning}
+                                </p>
+                                <p style='margin: 5px 0 0 0; font-size: 13px; color: #b91c1c;'>
+                                    If you didn't request this action, please ignore this email to keep your account secure.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
                     
-                    <p style='font-size: 14px; color: #ef4444; text-align: center; font-weight: 500;'>⚠️ {expiryWarning}</p>
-                </div>
-                <div style='background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;'>
-                    <p style='margin: 0;'>&copy; {DateTime.UtcNow.Year} MediTender Smart Assistant. All rights reserved.</p>
-                    <p style='margin: 5px 0 0 0;'>Alexandria, Egypt</p>
-                </div>
-            </div>";
+                    <!-- Footer -->
+                    <tr>
+                        <td align='center' style='background-color: #f8fafc; padding: 20px; border-top: 1px solid #e2e8f0;'>
+                            <p style='margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;'>
+                                &copy; {DateTime.UtcNow.Year} MediTender Smart Assistant.<br>
+                                Alexandria, Egypt
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>";
         }
-
+        
         [HttpGet("billing-config")]
         [AllowAnonymous]
         public IActionResult GetBillingConfig()
