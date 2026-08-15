@@ -7,6 +7,8 @@
         <script src="./script/config.js"></script>
         <link rel="stylesheet" href="./style/theme.css">
         <link rel="stylesheet" href="./style/my-tenders.css">
+        <link rel="stylesheet" href="./style/home.css">
+        <style>header {position: relative;}</style>
     </head>
     <body>
         <header>
@@ -25,7 +27,7 @@
                 <table id="tendersTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            
                             <th>Tender Title</th>
                             <th>Date Created</th>
                             <th>Action</th>
@@ -82,7 +84,7 @@
                                 
                                 const tr = document.createElement("tr");
                                 tr.innerHTML = `
-                                    <td><strong>#${tender.id}</strong></td>
+                                    
                                     <td>${safeTitle}</td>
                                     <td>${date}</td>
                                     <td>

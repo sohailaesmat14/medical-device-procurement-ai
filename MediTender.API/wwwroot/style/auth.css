@@ -5,7 +5,7 @@ body {
     min-height: 100vh; 
 }
 
-.login-container { 
+.auth-container { 
     background: var(--bg-card); 
     padding: 40px; 
     border-radius: var(--radius-xl); 
@@ -137,4 +137,43 @@ input[type="email"]:focus {
     font-size: 18px;
     color: var(--text-muted);
     padding: 0;
+}
+
+.auth-btn { 
+    background-color: var(--primary-blue); 
+    color: var(--text-light); 
+    border: none; 
+    width: 100%; 
+    padding: 15px; 
+    border-radius: var(--radius-lg); 
+    font-size: 16px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: 0.3s;
+    margin-top: 10px;
+}
+
+.auth-btn:hover {
+    background-color: var(--primary-blue-hover);
+}
+
+.auth-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.login-link, .signup-link, .back-link {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.login-link a, .signup-link a, .back-link a {
+    color: var(--primary-blue);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.login-link a:hover, .signup-link a:hover, .back-link a:hover {
+    text-decoration: underline;
 }

@@ -10,13 +10,15 @@
         <script src="./script/config.js"></script>
         <link rel="stylesheet" href="./style/theme.css">
         <link rel="stylesheet" href="./style/dashboard.css">
+        <link rel="stylesheet" href="./style/home.css">
+        <style>header {position: relative;}</style>
     </head>
     <body>
         <header>
             <div class="logo">MediProcure <span>BI Analytics</span> 📊</div>
             <div class="header-actions" style="display: flex; gap: 15px; align-items: center; position: absolute; right: 20px; top: 20px;">
                 <a href="upload.html" style="background-color: #2563eb; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; border: none;">
-                    ➕ New Analysis
+                    + New Analysis
                 </a>
                 <a href="my-tenders.html" style="background-color: #475569; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; border: none;">📂 History</a>
             </div>
@@ -416,9 +418,9 @@
 
                     const barColors = globalEvaluations.map((ev) => {
                         if (ev.finalDecision === "Recommended for Acceptance")
-                            return "rgba(16, 185, 129, 0.7)"; 
+                            return "rgba(16, 185, 129, 0.7)";
                         if (ev.finalDecision === "Pending Manual Review")
-                            return "rgba(245, 158, 11, 0.7)"; 
+                            return "rgba(245, 158, 11, 0.7)";
                         return "rgba(239, 68, 68, 0.7)"; 
                     });
 
@@ -496,32 +498,32 @@
                     });
 
                     activeCharts.statusDist = new Chart(ctx, {
-                        type: "bar",
-                        data: {
-                            labels: vendorNames,
-                            datasets: [
-                                {
-                                    label: "Met",
-                                    data: metCounts,
-                                    backgroundColor: "var(--success-color)",
-                                },
-                                {
-                                    label: "Partially Met",
-                                    data: partialCounts,
-                                    backgroundColor: "var(--warning-color)",
-                                },
-                                {
-                                    label: "Not Mentioned ",
-                                    data: notMentionedCounts,
-                                    backgroundColor: "#94a3b8",
-                                },
-                                {
-                                    label: "Not Met / Error ",
-                                    data: notMetCounts,
-                                    backgroundColor: "var(--danger-color)",
-                                },
-                            ],
-                        },
+                    type: "bar",
+                    data: {
+                        labels: vendorNames,
+                        datasets: [
+                            {
+                                label: "Met",
+                                data: metCounts,
+                                backgroundColor: "#10b981", 
+                            },
+                            {
+                                label: "Partially Met",
+                                data: partialCounts,
+                                backgroundColor: "#f59e0b", 
+                            },
+                            {
+                                label: "Not Mentioned ",
+                                data: notMentionedCounts,
+                                backgroundColor: "#94a3b8", 
+                            },
+                            {
+                                label: "Not Met / Error ",
+                                data: notMetCounts,
+                                backgroundColor: "#ef4444", 
+                            },
+                        ],
+                    },
                         options: {
                             responsive: true,
                             scales: {
