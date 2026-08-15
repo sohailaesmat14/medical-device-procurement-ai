@@ -26,10 +26,10 @@ const style = document.createElement('style');
 style.innerHTML = `
 .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
 .toast { background-color: #1e293b; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); font-size: 14px; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateX(100%); animation: slideIn 0.3s forwards; min-width: 250px; max-width: 350px; font-family: system-ui, -apple-system, sans-serif;}
-.toast.success { border-left: 4px solid #10b981; }
-.toast.error { border-left: 4px solid #ef4444; }
+.toast.success { border-left: 4px solid var(--success-color); }
+.toast.error { border-left: 4px solid var(--danger-color); }
 .toast.info { border-left: 4px solid #3b82f6; }
-.toast.warning { border-left: 4px solid #f59e0b; }
+.toast.warning { border-left: 4px solid var(--warning-color); }
 .toast-close { margin-left: auto; cursor: pointer; font-weight: bold; color: #94a3b8; }
 .toast-close:hover { color: white; }
 @keyframes slideIn { to { transform: translateX(0); opacity: 1; } }
@@ -116,11 +116,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             profileDiv.style.cssText = 'display: flex; align-items: center; gap: 15px;';
             profileDiv.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 5px 15px 5px 5px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2);">
-                    <div style="background-color: #10b981; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px;">${initials}</div>
+                    <div style="background-color: var(--success-color); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px;">${initials}</div>
                     <span style="font-weight: bold; font-size: 14px; color: white;">${userName}</span>
                 </div>
                 <a href="upload.html" style="background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s;">Dashboard 🚀</a>
-                <button onclick="performLogout()" style="background: none; border: none; color: #10b981; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px;" title="Logout">Logout</button>
+                <button onclick="performLogout()" style="background: none; border: none; color: var(--success-color); cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px;" title="Logout">Logout</button>
             `;
 
             if (signupLink && signupLink.parentElement === loginLink.parentElement) {
@@ -138,14 +138,25 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (text === 'start free trial' || text === 'get started') {
                 a.href = "upload.html";
                 a.innerText = "Go to Dashboard 🚀";
-                a.style.backgroundColor = "#10b981"; // Optional: make it green to stand out
-                a.style.borderColor = "#10b981";
+                a.style.backgroundColor = "var(--success-color)"; // Optional: make it green to stand out
+                a.style.borderColor = "var(--success-color)";
             }
         });
     }
 
     // --- OTHER PAGES WIDGET LOGIC ---
-    if (token && !currentPage.includes("login.html") && !currentPage.includes("signup.html") && !isHomePage) {
+    const authPages = [
+        "login.html", 
+        "signup.html", 
+        "forgot-password.html", 
+        "reset-password.html", 
+        "verify-email.html",
+        "payment-callback.html"
+    ];
+    
+    const isAuthPage = authPages.some(page => currentPage.includes(page));
+
+    if (token && !isAuthPage && !isHomePage) {
         let remainingQuota = sessionStorage.getItem("meditender_cached_quota");
 
         if (!remainingQuota) {
@@ -195,11 +206,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         quotaBadge.style.cssText = `background-color: #3b82f6; color: white; padding: 10px 16px; border-radius: 50px; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;`;
 
         const logoutBtn = document.createElement("button");
-        logoutBtn.innerHTML = "🚪 Logout";
+        logoutBtn.innerHTML = " Logout";
         logoutBtn.ariaLabel = "Logout";
-        logoutBtn.style.cssText = `background-color: #ef4444; color: white; border: none; padding: 10px 18px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease-in-out;`;
+        logoutBtn.style.cssText = `background-color: var(--danger-color); color: white; border: none; padding: 10px 18px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease-in-out;`;
         logoutBtn.onmouseover = () => logoutBtn.style.backgroundColor = "#dc2626";
-        logoutBtn.onmouseout = () => logoutBtn.style.backgroundColor = "#ef4444";
+        logoutBtn.onmouseout = () => logoutBtn.style.backgroundColor = "var(--danger-color)";
         logoutBtn.onmousedown = () => logoutBtn.style.transform = "scale(0.95)";
         logoutBtn.onmouseup = () => logoutBtn.style.transform = "scale(1)";
         logoutBtn.onclick = performLogout;

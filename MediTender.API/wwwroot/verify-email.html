@@ -4,30 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediProcure AI - Verify Email</title>
-    <script src="config.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f7f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .auth-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); width: 100%; max-width: 400px; text-align: center; margin: 20px; }
-        .logo { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #111827; text-decoration: none; display: inline-block; }
-        .logo span { color: #10b981; }
-        .avatar-placeholder { width: 80px; height: 80px; background-color: #e2e8f0; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; font-size: 32px; border: 2px dashed #cbd5e1; }
-        .input-group { text-align: left; margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #475569; font-weight: bold; }
-        input[type="text"], input[type="email"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; transition: 0.3s; }
-        input[type="text"] { text-align: center; font-size: 18px; letter-spacing: 5px; font-weight: bold; }
-        input[type="text"]:focus, input[type="email"]:focus { outline: none; border-color: #2563eb; }
-        .auth-btn { background-color: #2563eb; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .auth-btn:hover { background-color: #1d4ed8; }
-        .error-msg { color: #dc2626; font-size: 14px; margin-bottom: 15px; display: none; font-weight: bold; background: #fee2e2; padding: 10px; border-radius: 6px; }
-    </style>
+    <script src="./script/config.js"></script>
+    <link rel="stylesheet" href="./style/theme.css">
+    <link rel="stylesheet" href="./style/auth.css">
 </head>
 <body>
     <div class="auth-container">
         <a href="home.html" class="logo">MediProcure <span>AI</span></a>
         <div class="avatar-placeholder">✉️</div>
         
-        <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 10px;">Verify Your Email</h2>
-        <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Please enter your email and the 6-digit verification code.</p>
+        <h2 style="color: var(--text-main); margin-top: 0; margin-bottom: 10px;">Verify Your Email</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Please enter your email and the 6-digit verification code.</p>        
         
         <div id="errorMsg" class="error-msg"></div>
 
@@ -41,9 +28,9 @@
                 <input type="text" id="verificationCode" placeholder="000000" maxlength="6" required>
             </div>
             <button type="submit" class="auth-btn" id="verifyBtn">Verify & Continue</button>
-            <div style="margin-top: 20px; font-size: 14px; color: #64748b;">
+            <div style="margin-top: 20px; font-size: 14px; color: var(--text-muted);">
                 Didn't receive the code? 
-                <button type="button" id="resendBtn" onclick="resendCode()" style="background: none; border: none; color: #2563eb; font-weight: bold; cursor: pointer; padding: 0;">Resend Code</button>
+                <button type="button" id="resendBtn" onclick="resendCode()" style="background: none; border: none; color: var(--primary-blue); font-weight: bold; cursor: pointer; padding: 0;">Resend Code</button>
             </div>
         </form>
     </div>

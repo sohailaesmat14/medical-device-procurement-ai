@@ -44,7 +44,7 @@ namespace MediTender.API.Controllers
                     <tr>
                         <td align='center' style='background: #0f172a; padding: 35px 20px;'>
                             <h1 style='color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px; font-weight: 800;'>
-                                MediProcure <span style='color: #10b981;'>AI</span>
+                                MediProcure <span style='color: var(--success-color);'>AI</span>
                             </h1>
                             <p style='color: #94a3b8; margin: 10px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;'>{title}</p>
                         </td>
@@ -66,7 +66,7 @@ namespace MediTender.API.Controllers
                             </div>
                             
                             <!-- Warning / Info Box -->
-                            <div style='background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px 20px; border-radius: 0 8px 8px 0;'>
+                            <div style='background-color: #fef2f2; border-left: 4px solid var(--danger-color); padding: 15px 20px; border-radius: 0 8px 8px 0;'>
                                 <p style='margin: 0; font-size: 14px; color: #991b1b; font-weight: 600;'>
                                     ⚠️ {expiryWarning}
                                 </p>

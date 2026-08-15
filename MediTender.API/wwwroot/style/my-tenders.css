@@ -1,0 +1,102 @@
+
+header {
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    text-decoration: none;
+    color: var(--text-light);
+}
+
+.logo span {
+    color: var(--primary-green);
+}
+
+.main-container {
+    max-width: 1000px;
+    margin: 50px auto;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    padding: 40px;
+}
+
+h1 {
+    font-size: 28px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--text-main);
+}
+
+p.subtitle {
+    color: var(--text-muted);
+    margin-bottom: 30px;
+    font-size: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+}
+
+th {
+    background-color: var(--bg-main);
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f1f5f9; /* درجة لون خفيفة جداً للـ hover */
+}
+
+.btn-view {
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    border: none;
+    padding: 8px 15px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-view:hover {
+    background-color: var(--primary-blue-hover);
+}
+
+.btn-new {
+    background-color: var(--primary-green);
+    color: var(--text-light);
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: bold;
+    text-decoration: none;
+    float: right;
+}
+
+.btn-new:hover {
+    background-color: var(--primary-green-hover);
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-weight: bold;
+}

@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>MediProcure AI - Payment Status</title>
-    <script src="config.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f8fafc; }
-        .status-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-    </style>
+    <script src="./script/config.js"></script>
+    <link rel="stylesheet" href="./style/theme.css">
+    <link rel="stylesheet" href="./style/payment-callback.css">
 </head>
 <body>
     <div class="status-box">
-        <h2 id="statusMessage" style="color: #1e293b;">Verifying payment... ⏳</h2>
-        <p id="statusSubtext" style="color: #64748b;">Please wait while we confirm your transaction with the server.</p>
+        <h2 id="statusMessage" style="color: var(--text-main);">Verifying payment... ⏳</h2>
+        <p id="statusSubtext" style="color: var(--text-muted);">Please wait while we confirm your transaction...</p>
     </div>
 
     <script>
@@ -25,14 +23,14 @@
 
             function showFailure() {
                 statusMessage.innerText = "Payment Failed or Cancelled ❌";
-                statusMessage.style.color = "#ef4444";
+                statusMessage.style.color = "var(--danger-color)";
                 statusSubtext.innerText = "Redirecting you back to plan selection...";
                 setTimeout(() => window.location.replace("subscription.html"), 2000);
             }
 
             function showSuccess(plan) {
                 statusMessage.innerText = "Payment Successful! 🎉";
-                statusMessage.style.color = "#10b981";
+                statusMessage.style.color = "var(--success-color)";
                 statusSubtext.innerText = "Redirecting to your dashboard...";
                 sessionStorage.setItem("meditender_plan", plan);
                 sessionStorage.removeItem("meditender_cached_quota");
@@ -67,9 +65,18 @@
                 await new Promise(r => setTimeout(r, delayMs));
             }
             statusMessage.innerText = "Still Confirming Your Payment ⏳";
-            statusMessage.style.color = "#f59e0b";
-            statusSubtext.innerText = "This is taking longer than usual. If your payment succeeded, your plan will update shortly — you can also refresh this page.";
-        });    
+            statusMessage.style.color = "var(--warning-color)";
+            statusSubtext.innerText = "This is taking longer than usual. If your payment succeeded, your plan will update shortly.";
+
+            const actionContainer = document.createElement('div');
+            actionContainer.style.marginTop = "25px";
+            actionContainer.innerHTML = `
+                <button onclick="window.location.reload()" style="background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: 0.2s;">↻ Check Again</button>
+                <a href="upload.html" style="color: #64748b; text-decoration: none; font-weight: bold; padding: 10px;">Go to Dashboard</a>
+            `;
+            document.querySelector('.status-box').appendChild(actionContainer);
+        });
+  
     </script>
 </body>
 </html>

@@ -4,280 +4,9 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>MediProcure AI - Upload Documents</title>
-        <script src="config.js"></script>
-        <style>
-            body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                background-color: #f4f7f9;
-                color: #333;
-            }
-            header {
-                background-color: #111827;
-                color: white;
-                padding: 15px 40px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            .user-profile {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            .avatar {
-                background-color: #0ea5e9;
-                color: white;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-weight: bold;
-            }
-            .user-details {
-                line-height: 1.2;
-            }
-            .user-details strong {
-                font-size: 14px;
-            }
-            .user-details small {
-                font-size: 12px;
-                color: #9ca3af;
-            }
-            .hospital-badge {
-                background-color: #374151;
-                padding: 8px 15px;
-                border-radius: 20px;
-                font-size: 14px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .logo {
-                font-size: 20px;
-                font-weight: bold;
-            }
-            .logo span {
-                color: #10b981;
-            }
-            .main-container {
-                max-width: 900px;
-                margin: 50px auto;
-                background: white;
-                border-radius: 12px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-                padding: 50px;
-                text-align: center;
-            }
-            .badge-version {
-                background-color: #e0f2fe;
-                color: #0284c7;
-                padding: 5px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: bold;
-                display: inline-block;
-                margin-bottom: 20px;
-            }
-            h1 {
-                font-size: 28px;
-                margin-bottom: 10px;
-                color: #1f2937;
-            }
-            p.subtitle {
-                color: #6b7280;
-                margin-bottom: 40px;
-                font-size: 15px;
-                line-height: 1.6;
-            }
-            .upload-cards-wrapper {
-                display: flex;
-                gap: 30px;
-                margin-bottom: 40px;
-                text-align: left;
-            }
-            .upload-card {
-                flex: 1;
-                border: 2px dashed #cbd5e1;
-                border-radius: 12px;
-                padding: 30px;
-                background-color: #fdfdfd;
-            }
-            .upload-card h3 {
-                margin: 0 0 15px 0;
-                font-size: 18px;
-                color: #1e293b;
-                text-align: center;
-            }
-            input[type="file"],
-            input[type="text"] {
-                width: 100%;
-                padding: 10px;
-                margin-bottom: 10px;
-                border: 1px solid #ccc;
-                border-radius: 6px;
-                box-sizing: border-box;
-            }
-            .add-btn {
-                background-color: #10b981;
-                color: white;
-                border: none;
-                padding: 10px;
-                border-radius: 6px;
-                cursor: pointer;
-                width: 100%;
-                font-weight: bold;
-                margin-bottom: 15px;
-            }
-            .add-btn:hover {
-                background-color: #059669;
-            }
-            .vendor-list {
-                font-size: 14px;
-                background: #f1f5f9;
-                padding: 10px;
-                border-radius: 6px;
-                min-height: 50px;
-            }
-            .vendor-item {
-                padding: 8px 0;
-                border-bottom: 1px solid #e2e8f0;
-                font-size: 13px;
-            }
-            .start-btn {
-                background-color: #2563eb;
-                color: white;
-                border: none;
-                width: 100%;
-                padding: 18px;
-                border-radius: 8px;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                transition: background-color 0.3s;
-            }
-            .start-btn:hover {
-                background-color: #1d4ed8;
-            }
-            .start-btn:disabled {
-                background-color: #94a3b8;
-                cursor: not-allowed;
-            }
-            #statusMessage {
-                margin-top: 15px;
-                font-weight: bold;
-                color: #ef4444;
-                display: none;
-            }
-            .progress-container {
-                display: none;
-                margin-top: 25px;
-                text-align: left;
-            }
-            .progress-info {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-            }
-            .progress-text {
-                font-weight: bold;
-                color: #2563eb;
-                font-size: 16px;
-            }
-            .progress-step {
-                color: #6b7280;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            .progress-bar-bg {
-                width: 100%;
-                background-color: #e2e8f0;
-                border-radius: 8px;
-                overflow: hidden;
-                height: 22px;
-            }
-            .progress-bar-fill {
-                width: 0%;
-                height: 100%;
-                background-color: #2563eb;
-                transition:
-                    width 0.4s ease,
-                    background-color 0.4s ease;
-            }
-            .modal-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(17, 24, 39, 0.7);
-                z-index: 1000;
-                justify-content: center;
-                align-items: center;
-                backdrop-filter: blur(4px);
-            }
-            .modal-content {
-                background: white;
-                padding: 30px;
-                border-radius: 12px;
-                max-width: 450px;
-                width: 90%;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            }
-            .modal-title {
-                margin-top: 0;
-                color: #1e293b;
-                font-size: 22px;
-                margin-bottom: 10px;
-            }
-            .modal-message {
-                color: #475569;
-                margin-bottom: 25px;
-                line-height: 1.6;
-                font-size: 15px;
-                white-space: pre-line;
-            }
-            .modal-actions {
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-            }
-            .btn-cancel {
-                background: #e2e8f0;
-                color: #475569;
-                border: none;
-                padding: 10px 25px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: 0.2s;
-            }
-            .btn-cancel:hover {
-                background: #cbd5e1;
-            }
-            .btn-confirm {
-                background: #10b981;
-                color: white;
-                border: none;
-                padding: 10px 25px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: 0.2s;
-            }
-            .btn-confirm:hover {
-                background: #059669;
-            }
-        </style>
+        <script src="./script/config.js"></script>
+        <link rel="stylesheet" href="./style/theme.css">
+        <link rel="stylesheet" href="./style/upload.css">
     </head>
     <body>
         <header>
@@ -437,6 +166,23 @@
             }
 
             function removeVendor(index) {
+                const vendorToDelete = vendorQueue[index];
+                if (editingVendorId === vendorToDelete.id) {
+                    editingVendorId = null;
+                    
+                    const addBtn = document.querySelector('.add-btn');
+                    if(addBtn) addBtn.innerText = "Add Vendor to Queue";
+                    
+                    document.getElementById('techFileDisplay').innerText = "";
+                    document.getElementById('finFileDisplay').innerText = "";
+                    
+                    document.getElementById('vendorName').value = "";
+                    document.getElementById('vendorTechFile').value = "";
+                    document.getElementById('vendorFinFile').value = "";
+                    document.getElementById('skipFinFile').checked = false;
+                    toggleFinFileInput();
+                }
+
                 vendorQueue.splice(index, 1);
                 updateVendorUI();
             }
@@ -742,8 +488,8 @@
                     sessionStorage.setItem("meditender_vendors", JSON.stringify(uploadedVendorNames));
 
                     progressStep.innerText = "All files uploaded successfully! Redirecting to engine...";
-                    progressBar.style.backgroundColor = "#10b981";
-                    progressText.style.color = "#10b981";
+                    progressBar.style.backgroundColor = "var(--success-color)";
+                    progressText.style.color = "var(--success-color)";
 
                     isUploading = true;
 

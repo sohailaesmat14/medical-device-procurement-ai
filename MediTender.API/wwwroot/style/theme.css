@@ -1,0 +1,44 @@
+/* theme.css */
+:root {
+    /* Primary Brand Colors */
+    --primary-blue: #2563eb;
+    --primary-blue-hover: #1d4ed8;
+    --primary-green: #10b981;
+    --primary-green-hover: #059669;
+
+    /* Backgrounds */
+    --bg-main: #f4f7f9;
+    --bg-card: #ffffff;
+    --bg-dark: #111827;
+
+    /* Text Colors */
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --text-light: #f8fafc;
+
+    /* Status & Alerts */
+    --danger-color: #dc2626;
+    --danger-bg: #fee2e2;
+    --warning-color: #d97706;
+    --warning-bg: #fef3c7;
+    --success-color: #059669;
+    --success-bg: #d1fae5;
+
+    /* Borders & Shadows */
+    --border-light: #e2e8f0;
+    --border-dashed: #cbd5e1;
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+    
+    /* Shared border radius */
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+}
+
+/* Global Shared Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+}

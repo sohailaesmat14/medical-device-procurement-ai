@@ -7,280 +7,9 @@
         <script src="https://cdn.jsdelivr.net/gh/linways/table-to-excel@1.0.4/dist/tableToExcel.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="config.js"></script>
-        <style>
-            body {
-                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-                margin: 0;
-                background-color: #f1f5f9;
-                color: #333;
-            }
-            header {
-                background-color: #0f172a;
-                color: white;
-                padding: 30px 40px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .logo span {
-                color: #10b981;
-            }
-            #dashboardContent {
-                background-color: #ffffff;
-            }
-            .container {
-                max-width: 1400px;
-                margin: 30px auto;
-                padding: 0 20px;
-            }
-            .summary-card {
-                background: linear-gradient(135deg, #1e293b, #334155);
-                color: white;
-                padding: 25px;
-                border-radius: 12px;
-                margin-bottom: 25px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .summary-card h2 {
-                margin-top: 0;
-                color: #38bdf8;
-            }
-            .summary-text {
-                font-size: 16px;
-                line-height: 1.6;
-            }
-            .insights-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-            .insight-box {
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                border-top: 4px solid #3b82f6;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-            .insight-box h3 {
-                margin-top: 0;
-                font-size: 16px;
-                color: #475569;
-            }
-            .insight-value {
-                font-size: 24px;
-                font-weight: bold;
-                color: #1e293b;
-                margin: 10px 0;
-            }
-            .insight-desc {
-                font-size: 13px;
-                color: #64748b;
-            }
-            .box-warning {
-                border-top-color: #f59e0b;
-            }
-            .box-danger {
-                border-top-color: #ef4444;
-            }
-            .box-success {
-                border-top-color: #10b981;
-            }
-            .matrix-container {
-                background: white;
-                padding: 25px;
-                border-radius: 12px;
-                overflow-x: auto;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 14px;
-            }
-            th,
-            td {
-                border: 1px solid #e2e8f0;
-                padding: 12px;
-                text-align: left;
-            }
-            th {
-                background-color: #f8fafc;
-                font-weight: bold;
-                color: #1e293b;
-                position: sticky;
-                top: 0;
-            }
-            .req-col {
-                width: 30%;
-                font-weight: bold;
-                color: #334155;
-            }
-            .status-met {
-                color: #059669;
-                font-weight: bold;
-                background: #d1fae5;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-            .status-partial {
-                color: #d97706;
-                font-weight: bold;
-                background: #fef3c7;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-            .status-notmet {
-                color: #dc2626;
-                font-weight: bold;
-                background: #fee2e2;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-            .price-tag {
-                font-size: 18px;
-                font-weight: bold;
-                color: #047857;
-            }
-            .outlier-tag {
-                background: #ef4444;
-                color: white;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 11px;
-                margin-left: 5px;
-            }
-            .status-missing {
-                color: #6b7280;
-                font-weight: bold;
-                background: #f3f4f6;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-            tr,
-            .charts-container,
-            .summary-card,
-            .insights-grid {
-                page-break-inside: avoid !important;
-            }
-            .req-col {
-                width: 30%;
-                min-width: 250px;
-                font-weight: bold;
-                color: #334155;
-                position: sticky;
-                left: 0;
-                background-color: #f8fafc;
-                z-index: 10;
-                box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
-            }
-            th.req-col {
-                z-index: 11;
-            }
-            .evidence-tooltip {
-                cursor: help;
-                margin-left: 5px;
-                font-size: 14px;
-                position: relative;
-                display: inline-block;
-            }
-            .evidence-tooltip:hover::after {
-                content: attr(data-evidence);
-                position: absolute;
-                bottom: 120%;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #1e293b;
-                color: white;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 12px;
-                white-space: pre-wrap;
-                width: max-content;
-                max-width: 300px;
-                z-index: 20;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                pointer-events: none;
-            }
-            .dashboard-modal-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(17, 24, 39, 0.7);
-                z-index: 1000;
-                justify-content: center;
-                align-items: center;
-                backdrop-filter: blur(4px);
-            }
-            .dashboard-modal-content {
-                background: white;
-                padding: 25px;
-                border-radius: 12px;
-                max-width: 400px;
-                width: 90%;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            }
-            .dashboard-modal-actions {
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-                margin-top: 20px;
-            }
-            .btn-cancel {
-                background: #e2e8f0;
-                color: #475569;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            .btn-confirm {
-                background: #3b82f6;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            @media (max-width: 768px) {
-                .dashboard-controls {
-                    flex-direction: column;
-                    align-items: stretch !important;
-                }
-                .dashboard-controls input,
-                .dashboard-controls select {
-                    width: 100%;
-                    margin-bottom: 10px;
-                }
-                .dashboard-controls div {
-                    display: flex;
-                    flex-direction: column;
-                    width: 100%;
-                    gap: 10px;
-                }
-                .dashboard-controls button {
-                    width: 100%;
-                }
-                table {
-                    font-size: 12px;
-                }
-                .req-col {
-                    min-width: 150px;
-                }
-            }
-        </style>
+        <script src="./script/config.js"></script>
+        <link rel="stylesheet" href="./style/theme.css">
+        <link rel="stylesheet" href="./style/dashboard.css">
     </head>
     <body>
         <header>
@@ -375,6 +104,20 @@
 
             function generateBIDashboard() {
                 const content = document.getElementById("dashboardContent");
+                
+                let savedSearch = "";
+                let savedStatus = "All";
+                let savedVendor = "All";
+                let savedMandatory = false;
+                
+                const existingSearchInput = document.getElementById("searchInput");
+                if (existingSearchInput) {
+                    savedSearch = existingSearchInput.value;
+                    savedStatus = document.getElementById("statusFilter").value;
+                    savedVendor = document.getElementById("vendorFilter").value;
+                    savedMandatory = document.getElementById("mandatoryFilter").checked;
+                }
+
                 const reqMap = {};
                 
                 const validEvaluation = globalEvaluations.find(ev => 
@@ -420,7 +163,7 @@
                 const avgPrice =
                     allPrices.length > 0
                         ? allPrices.reduce((a, b) => a + b, 0) /
-                          allPrices.length
+                        allPrices.length
                         : 0;
                 const outlierThreshold = avgPrice * 0.6;
 
@@ -461,10 +204,10 @@
                 let coveragePercent =
                     totalMandatory > 0
                         ? Math.round(
-                              (evidenceFound /
-                                  (totalMandatory * globalEvaluations.length)) *
-                                  100,
-                          )
+                            (evidenceFound /
+                                (totalMandatory * globalEvaluations.length)) *
+                                100,
+                        )
                         : 0;
 
                 let narrative = `Based on the AI evaluation of ${globalEvaluations.length} vendors, `;
@@ -539,7 +282,7 @@
                         </label>
 
                         <div style="margin-left: auto; display: flex; gap: 10px;">
-                            <button onclick="exportToExcel()" style="background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📊 Export Excel</button>
+                            <button onclick="exportToExcel()" style="background: var(--success-color); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📊 Export Excel</button>
                             <button onclick="exportToPDF()" style="background: #3b82f6; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📄 Export PDF</button>
                         </div>
                     </div>
@@ -569,8 +312,8 @@
                                                 : ev.finalDecision.includes(
                                                         "Review",
                                                     )
-                                                  ? "#d97706"
-                                                  : "#dc2626";
+                                                ? "#d97706"
+                                                : "#dc2626";
                                         return `<th>
                                     <div style="font-size: 16px;">${escapeHTML(ev.vendorName)}</div>
                                     <div style="font-size:12px; font-weight:bold; color: ${statusColor}; margin: 5px 0;">${ev.finalDecision}</div>
@@ -606,9 +349,9 @@
                                                     ? "status-met"
                                                     : res.status ===
                                                         "Partially Met"
-                                                      ? "status-partial"
-                                                      : res.status ===
-                                                          "Not Mentioned"
+                                                    ? "status-partial"
+                                                    : res.status ===
+                                                        "Not Mentioned"
                                                         ? "status-missing"
                                                         : "status-notmet";
 
@@ -640,7 +383,7 @@
                                                     "Partially Met" ||
                                                     res.status ===
                                                         "Not Mentioned")
-                                                    ? `<button onclick="overrideItem('${escapeForJS(ev.vendorName)}', '${escapeForJS(req.text)}')" 
+                                                    ? `<button onclick="triggerOverrideModal('${escapeForJS(ev.vendorName)}', '${escapeForJS(req.text)}')" 
                                                 style="margin-top: 5px; display: block; background: #3b82f6; color: white; border: none; border-radius: 3px; font-size: 10px; padding: 3px 6px; cursor: pointer;">
                                                 ✓ Approve Item
                                                 </button>`
@@ -657,6 +400,7 @@
                 </div>
             `;
                 content.innerHTML = html;
+                
                 function renderTotalScoreChart() {
                     if (activeCharts.totalScore) activeCharts.totalScore.destroy();
                     const ctx = document
@@ -759,12 +503,12 @@
                                 {
                                     label: "Met",
                                     data: metCounts,
-                                    backgroundColor: "#10b981",
+                                    backgroundColor: "var(--success-color)",
                                 },
                                 {
                                     label: "Partially Met",
                                     data: partialCounts,
-                                    backgroundColor: "#f59e0b",
+                                    backgroundColor: "var(--warning-color)",
                                 },
                                 {
                                     label: "Not Mentioned ",
@@ -774,7 +518,7 @@
                                 {
                                     label: "Not Met / Error ",
                                     data: notMetCounts,
-                                    backgroundColor: "#ef4444",
+                                    backgroundColor: "var(--danger-color)",
                                 },
                             ],
                         },
@@ -809,8 +553,17 @@
                 renderStatusDistributionChart();
                 renderTotalScoreChart();
                 populateVendorFilter();
-            }
 
+                if (existingSearchInput) {
+                    document.getElementById("searchInput").value = savedSearch;
+                    document.getElementById("statusFilter").value = savedStatus;
+                    document.getElementById("vendorFilter").value = savedVendor; 
+                    document.getElementById("mandatoryFilter").checked = savedMandatory;
+                    
+                    applyTableFilters(); 
+                }
+            }
+            
             window.triggerVendorOverrideModal = function (vendorName) {
                 const modal = document.getElementById("confirmModal");
                 document.getElementById("confirmModalText").innerHTML =
@@ -839,7 +592,7 @@
                             Authorization: `Bearer ${token}`,
                         },
                         body: JSON.stringify({
-                            tenderId: vendor.tenderId,
+                            tenderId: sessionStorage.getItem("meditender_current_id"),
                             vendorName: vendorName,
                         }),
                     });
@@ -901,10 +654,9 @@
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${token}`,
                         },
-                        body: JSON.stringify({
-                            tenderId: vendor.tenderId,
+                         body: JSON.stringify({
+                            tenderId: sessionStorage.getItem("meditender_current_id"),
                             vendorName: vendorName,
-                            requirement: reqText,
                         }),
                     });
 
@@ -1003,6 +755,13 @@
                 rows.forEach(row => {
                     if (row.style.display === "none") {
                         row.parentNode.removeChild(row);
+                    }
+                });
+
+                const cells = clonedTable.querySelectorAll("th, td");
+                cells.forEach(cell => {
+                    if (cell.style.display === "none") {
+                        cell.parentNode.removeChild(cell);
                     }
                 });
 

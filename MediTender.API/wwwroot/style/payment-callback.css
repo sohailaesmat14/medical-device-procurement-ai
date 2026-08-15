@@ -1,0 +1,14 @@
+body { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+}
+
+.status-box { 
+    background: var(--bg-card); 
+    padding: 40px; 
+    border-radius: var(--radius-xl); 
+    box-shadow: var(--shadow-sm); 
+    text-align: center; 
+}
