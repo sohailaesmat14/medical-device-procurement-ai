@@ -286,7 +286,7 @@ html {
 /* How it Works Section */
 .how-it-works {
     background: linear-gradient(180deg, var(--bg-card), var(--bg-main));
-    padding: 100px 5%;
+    padding: 80px 5%;
     text-align: center;
 }
 
@@ -309,7 +309,7 @@ html {
 
 .step {
     flex: 1;
-    min-width: 280px;
+    min-width: 200px;
     background: var(--bg-card);
     padding: 30px;
     border-radius: 16px;

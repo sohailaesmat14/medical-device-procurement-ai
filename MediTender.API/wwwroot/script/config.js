@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <div style="background-color: var(--success-color); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px;">${initials}</div>
                     <span style="font-weight: bold; font-size: 14px; color: white;">${userName}</span>
                 </div>
-                <a href="upload.html" style="background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s;">Dashboard 🚀</a>
+                <a href="upload.html" style="background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s;">Dashboard </a>
                 <button onclick="performLogout()" style="background: none; border: none; color: var(--success-color); cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px;" title="Logout">Logout</button>
             `;
 
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             const text = a.innerText.trim().toLowerCase();
             if (text === 'start free trial' || text === 'get started') {
                 a.href = "upload.html";
-                a.innerText = "Go to Dashboard 🚀";
+                a.innerText = "Go to Dashboard ";
                 a.style.backgroundColor = "var(--success-color)"; // Optional: make it green to stand out
                 a.style.borderColor = "var(--success-color)";
             }

@@ -43,7 +43,7 @@ function showCustomModal(title, message, isConfirm, onConfirm) {
 
         const confirmBtn = document.createElement("button");
         confirmBtn.className = "btn-confirm";
-        confirmBtn.innerText = "Start Analysis 🚀";
+        confirmBtn.innerText = "Start Analysis ";
         confirmBtn.onclick = () => {
             modal.style.display = "none";
             if (onConfirm) onConfirm();
