@@ -136,6 +136,10 @@ header {
     color: var(--text-light);
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 .hero h1 span {
     background: linear-gradient(135deg, var(--primary-glow), var(--primary-green));
     -webkit-background-clip: text;
