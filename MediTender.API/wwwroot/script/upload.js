@@ -1,0 +1,436 @@
+
+if (!sessionStorage.getItem("jwt_token")) {
+    window.location.replace("login.html");
+}
+
+let vendorQueue = [];
+let isUploading = false;
+const MAX_FILE_SIZE = 100 * 1024 * 1024; 
+
+window.addEventListener("beforeunload", function (e) {
+    if (vendorQueue.length > 0 && !isUploading) {
+        const confirmationMessage = "You have unsaved vendors in your queue. Are you sure you want to leave and lose your progress?";
+        e.returnValue = confirmationMessage;
+        return confirmationMessage;
+    }
+});
+
+function toggleFinFileInput() {
+    const skipFin = document.getElementById("skipFinFile").checked;
+    const finContainer = document.getElementById("finFileInputContainer");
+    if (skipFin) {
+        finContainer.style.display = "none";
+        document.getElementById("vendorFinFile").value = "";
+        document.getElementById("finFileDisplay").innerText = "";
+    } else {
+        finContainer.style.display = "block";
+    }
+}
+
+function showCustomModal(title, message, isConfirm, onConfirm) {
+    const modal = document.getElementById("customModal");
+    document.getElementById("modalTitle").innerText = title;
+    document.getElementById("modalMessage").innerText = message;
+
+    const actionsDiv = document.getElementById("modalActions");
+    actionsDiv.innerHTML = "";
+
+    if (isConfirm) {
+        const cancelBtn = document.createElement("button");
+        cancelBtn.className = "btn-cancel";
+        cancelBtn.innerText = "Cancel";
+        cancelBtn.onclick = () => (modal.style.display = "none");
+
+        const confirmBtn = document.createElement("button");
+        confirmBtn.className = "btn-confirm";
+        confirmBtn.innerText = "Start Analysis 🚀";
+        confirmBtn.onclick = () => {
+            modal.style.display = "none";
+            if (onConfirm) onConfirm();
+        };
+
+        actionsDiv.appendChild(cancelBtn);
+        actionsDiv.appendChild(confirmBtn);
+    } else {
+        const okBtn = document.createElement("button");
+        okBtn.className = "btn-confirm";
+        okBtn.innerText = "OK";
+        okBtn.onclick = () => (modal.style.display = "none");
+        actionsDiv.appendChild(okBtn);
+    }
+
+    modal.style.display = "flex";
+}
+
+function removeVendor(index) {
+    const vendorToDelete = vendorQueue[index];
+    if (editingVendorId === vendorToDelete.id) {
+        editingVendorId = null;
+        
+        const addBtn = document.querySelector('.add-btn');
+        if(addBtn) addBtn.innerText = "Add Vendor to Queue";
+        
+        document.getElementById('techFileDisplay').innerText = "";
+        document.getElementById('finFileDisplay').innerText = "";
+        
+        document.getElementById('vendorName').value = "";
+        document.getElementById('vendorTechFile').value = "";
+        document.getElementById('vendorFinFile').value = "";
+        document.getElementById('skipFinFile').checked = false;
+        toggleFinFileInput();
+    }
+
+    vendorQueue.splice(index, 1);
+    updateVendorUI();
+}
+
+let editingVendorId = null; 
+
+window.editVendor = function(id) {
+    const vendor = vendorQueue.find(v => v.id === id);
+    if (!vendor) return;
+
+    document.getElementById('vendorName').value = vendor.name;
+    document.getElementById('skipFinFile').checked = vendor.skipFin;
+    toggleFinFileInput();
+    
+    document.getElementById('techFileDisplay').innerText = `Current File: ${vendor.techFile.name} (Leave empty to keep)`;
+    if (vendor.finFile) {
+        document.getElementById('finFileDisplay').innerText = `Current File: ${vendor.finFile.name} (Leave empty to keep)`;
+    } else {
+        document.getElementById('finFileDisplay').innerText = "";
+    }
+
+    const addBtn = document.querySelector('.add-btn');
+    if(addBtn) addBtn.innerText = "Update Vendor";
+    
+    editingVendorId = id;
+};
+
+function addVendor() {
+    const nameInput = document.getElementById('vendorName').value.trim();
+    const techInput = document.getElementById('vendorTechFile'); 
+    const finInput = document.getElementById('vendorFinFile');
+    const skipFin = document.getElementById('skipFinFile').checked;
+
+    if (!nameInput) {
+        showToast("Please enter a vendor name.", "warning");
+        return;
+    }
+
+    const isDuplicate = vendorQueue.some(v => v.name.toLowerCase() === nameInput.toLowerCase() && v.id !== editingVendorId);
+    if (isDuplicate) {
+        showToast("A vendor with this name already exists in the queue.", "warning");
+        return;
+    }
+
+    if (editingVendorId) {
+        const vendorIndex = vendorQueue.findIndex(v => v.id === editingVendorId);
+        if (vendorIndex !== -1) {
+            vendorQueue[vendorIndex].name = nameInput;
+            vendorQueue[vendorIndex].skipFin = skipFin;
+            
+            if (techInput.files.length > 0) {
+                vendorQueue[vendorIndex].techFile = techInput.files[0];
+            }
+            
+            if (skipFin) {
+                vendorQueue[vendorIndex].finFile = null;
+            } else if (finInput.files.length > 0) {
+                vendorQueue[vendorIndex].finFile = finInput.files[0];
+            } else if (!vendorQueue[vendorIndex].finFile) {
+                showToast("Please select a Financial file or check 'Skip Financial'.", "warning");
+                return;
+            }
+        }
+
+        editingVendorId = null;
+        
+        const addBtn = document.querySelector('.add-btn'); 
+        if(addBtn) addBtn.innerText = "Add Vendor to Queue";
+        
+        document.getElementById('techFileDisplay').innerText = "";
+        document.getElementById('finFileDisplay').innerText = "";
+        
+    } else {
+        if (techInput.files.length === 0 || (!skipFin && finInput.files.length === 0)) {
+            showToast("Please select both Technical and Financial files, or check 'Skip Financial'.", "warning");
+            return;
+        }
+
+        vendorQueue.push({
+            id: crypto.randomUUID(), 
+            name: nameInput,
+            techFile: techInput.files[0],
+            finFile: skipFin ? null : finInput.files[0],
+            skipFin: skipFin
+        });
+    }
+
+    document.getElementById('vendorName').value = "";
+    techInput.value = "";
+    finInput.value = "";
+    document.getElementById('skipFinFile').checked = false;
+    toggleFinFileInput();
+    updateVendorUI(); 
+}
+
+function escapeHTML(str) {
+    if (!str) return "";
+    return str
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function updateVendorUI() {
+    const listDiv = document.getElementById("vendorList");
+    if (vendorQueue.length === 0) {
+        listDiv.innerHTML = "No vendors added yet.";
+        return;
+    }
+
+    listDiv.innerHTML = vendorQueue
+        .map(
+            (v, index) =>
+                `<div class="vendor-item" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding: 10px 0;">
+        <div>
+            ✅ <strong>${escapeHTML(v.name)}</strong><br>
+            <span style="color: #64748b;">Tech:</span> ${escapeHTML(v.techFile.name)}<br>
+            <span style="color: #64748b;">Fin:</span> ${v.finFile ? escapeHTML(v.finFile.name) : '<i style="color: #94a3b8;">Skipped</i>'}
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="editVendor('${v.id}')" style="background: #eab308; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">✏️ Edit</button>
+            <button onclick="removeVendor(${index})" style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">🗑️ Delete</button>
+        </div>
+    </div>`,
+        )
+        .join("");
+}
+
+function processUploads() {
+    const standardFile =
+        document.getElementById("standardFile").files[0];
+
+    if (!standardFile) {
+        showCustomModal(
+            "Missing Document",
+            "Please upload the Standard Specifications file.",
+            false,
+        );
+        return;
+    }
+    if (vendorQueue.length === 0) {
+        showCustomModal(
+            "Missing Vendor",
+            "Please add at least one vendor offer to the queue.",
+            false,
+        );
+        return;
+    }
+    for (let i = 0; i < vendorQueue.length; i++) {
+        const v = vendorQueue[i];
+        if (v.techFile.size > MAX_FILE_SIZE || (v.finFile && v.finFile.size > MAX_FILE_SIZE)) {
+            showCustomModal(
+                "File Too Large",
+                `One or more files for vendor '${escapeHTML(v.name)}' exceed the 100MB limit.`,
+                false
+            );
+            return;
+        }
+    }
+
+    let expectedCost = vendorQueue.length * CONFIG.BILLING.PER_VENDOR_COST;
+    let confirmMessage = `The AI analysis will require ${expectedCost} points from your quota.\n\nAre you sure you want to proceed?`;
+
+    showCustomModal(
+        "Confirm Analysis",
+        confirmMessage,
+        true,
+        async () => {
+            await executeUploadSequence(standardFile);
+        },
+    );
+}
+
+async function executeUploadSequence(standardFile) {
+    const statusMsg = document.getElementById("statusMessage");
+    const startBtn = document.getElementById("startBtn");
+    const progressContainer = document.getElementById("progressContainer");
+    const progressBar = document.getElementById("progressBar");
+    const progressText = document.getElementById("progressText");
+    const progressStep = document.getElementById("progressStep");
+    const token = sessionStorage.getItem("jwt_token");
+
+    startBtn.disabled = true;
+
+    try {
+        progressStep.innerText = "Checking AI Quota...";
+        progressContainer.style.display = "block";
+
+        const quotaRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                vendorCount: vendorQueue.length,
+            }),
+        });
+
+        if (!quotaRes.ok) {
+            const errorData = await quotaRes.json();
+            throw new Error(errorData.message || "Quota exceeded or API error.");
+        }
+
+        progressStep.innerText = "Initializing new Tender ID...";
+        const initRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/init-tender`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!initRes.ok) throw new Error("Failed to initialize a new tender.");
+        const initData = await initRes.json();
+        const currentTenderId = initData.tenderId; 
+
+        sessionStorage.setItem('meditender_current_id', currentTenderId);
+
+        statusMsg.style.display = "none";
+        progressBar.style.width = "0%";
+        progressBar.style.backgroundColor = "#2563eb";
+        progressText.style.color = "#2563eb";
+
+        let totalFiles = 1 + vendorQueue.length + vendorQueue.filter(v => v.finFile).length;
+        let completedFiles = 0;
+
+        function updateProgress(stepMessage) {
+            completedFiles++;
+            let percent = Math.round((completedFiles / totalFiles) * 100);
+            progressBar.style.width = percent + "%";
+            progressText.innerText = percent + "%";
+            progressStep.innerText = stepMessage;
+        }
+
+        progressStep.innerText = "Uploading Standard Specifications to Database...";
+        const stdFormData = new FormData();
+        stdFormData.append("file", standardFile);
+        stdFormData.append("documentType", "Standard");
+        stdFormData.append("tenderId", currentTenderId);
+
+        let res = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+            body: stdFormData,
+            timeout: 300000
+        });
+
+        if (!res.ok) throw new Error("Failed to upload standard specifications.");
+
+        updateProgress("Standard Specifications uploaded successfully.");
+
+        let uploadedVendorNames = [];
+        for (let i = 0; i < vendorQueue.length; i++) {
+            const v = vendorQueue[i];
+
+            progressStep.innerText = `Uploading Technical offer for vendor: ${v.name}...`;
+            const vTechFormData = new FormData();
+            vTechFormData.append("file", v.techFile);
+            vTechFormData.append("documentType", "TechnicalOffer");
+            vTechFormData.append("vendorName", v.name);
+            vTechFormData.append("tenderId", currentTenderId);
+
+            let vTechRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: vTechFormData,
+                timeout: 300000
+            });
+
+            if (!vTechRes.ok) throw new Error(`Failed to upload technical offer for ${v.name}.`);
+            updateProgress(`Technical Offer for ${v.name} uploaded successfully.`);
+
+            if (v.finFile) {
+                progressStep.innerText = `Uploading Financial offer for vendor: ${v.name}...`;
+                const vFinFormData = new FormData();
+                vFinFormData.append("file", v.finFile);
+                vFinFormData.append("documentType", "FinancialOffer");
+                vFinFormData.append("vendorName", v.name);
+                vFinFormData.append("tenderId", currentTenderId);
+
+                let vFinRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/upload-pdf`, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: vFinFormData,
+                    timeout: 300000
+                });
+
+                if (!vFinRes.ok) throw new Error(`Failed to upload financial offer for ${v.name}.`);
+                updateProgress(`Financial Offer for ${v.name} uploaded successfully.`);
+            }
+
+            uploadedVendorNames.push(v.name);
+        }
+
+        sessionStorage.setItem("meditender_standard_file", standardFile.name);
+        sessionStorage.setItem("meditender_vendors", JSON.stringify(uploadedVendorNames));
+
+        progressStep.innerText = "All files uploaded successfully! Redirecting to engine...";
+        progressBar.style.backgroundColor = "var(--success-color)";
+        progressText.style.color = "var(--success-color)";
+
+        isUploading = true;
+
+        setTimeout(() => {
+            window.location.href = "processing.html";
+        }, 1500);
+    } catch (err) {
+        progressContainer.style.display = "none";
+        statusMsg.style.display = "block";
+        statusMsg.innerText = "Error: " + err.message;
+        startBtn.disabled = false;
+        showToast(err.message, "error");
+    }
+}            
+
+document.addEventListener("DOMContentLoaded", () => {
+    const userName = sessionStorage.getItem("user_name") || "Committee Member";
+    
+    document.getElementById("userNameDisplay").innerText = userName;
+
+    const initials = userName.split(' ')
+                            .map(n => n[0])
+                            .join('')
+                            .substring(0, 2)
+                            .toUpperCase();
+                            
+    document.getElementById("userAvatar").innerText = initials;
+});
+
+function closePointsModal() {
+    document.getElementById('outOfPointsModal').style.display = 'none';
+}
+
+function goToSubscription() {
+    window.location.href = "subscription.html";
+}
+
+function checkPointsAndStart() {
+    let userPoints = 0; 
+
+    if (userPoints <= 0) {
+        document.getElementById('outOfPointsModal').style.display = 'flex';
+    } else {
+        console.log("Starting analysis...");
+        startUploadProcess();
+    }
+}

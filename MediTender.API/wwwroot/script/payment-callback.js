@@ -1,0 +1,64 @@
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get("success");
+    const statusMessage = document.getElementById("statusMessage");
+    const statusSubtext = document.getElementById("statusSubtext");
+    const token = sessionStorage.getItem("jwt_token");
+
+    function showFailure() {
+        statusMessage.innerText = "Payment Failed or Cancelled ❌";
+        statusMessage.style.color = "var(--danger-color)";
+        statusSubtext.innerText = "Redirecting you back to plan selection...";
+        setTimeout(() => window.location.replace("subscription.html"), 2000);
+    }
+
+    function showSuccess(plan) {
+        statusMessage.innerText = "Payment Successful! 🎉";
+        statusMessage.style.color = "var(--success-color)";
+        statusSubtext.innerText = "Redirecting to your dashboard...";
+        sessionStorage.setItem("meditender_plan", plan);
+        sessionStorage.removeItem("meditender_cached_quota");
+        setTimeout(() => window.location.replace("upload.html"), 1500);
+    }
+
+    if (success !== "true" || !token) {
+        showFailure();
+        return;
+    }
+
+    const maxAttempts = 6;
+    const delayMs = 1500;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const res = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/me`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const me = await res.json();
+                if (me.plan === "monthly" || me.plan === "annually") {
+                    showSuccess(me.plan);
+                    return;
+                }
+            }
+        } catch (e) {
+        }
+
+        statusSubtext.innerText = `Confirming with server... (${attempt}/${maxAttempts})`;
+        await new Promise(r => setTimeout(r, delayMs));
+    }
+    statusMessage.innerText = "Still Confirming Your Payment ⏳";
+    statusMessage.style.color = "var(--warning-color)";
+    statusSubtext.innerText = "This is taking longer than usual. If your payment succeeded, your plan will update shortly.";
+
+    const actionContainer = document.createElement('div');
+    actionContainer.style.marginTop = "25px";
+    actionContainer.innerHTML = `
+        <button onclick="window.location.reload()" style="background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: 0.2s;">↻ Check Again</button>
+        <a href="upload.html" style="color: #64748b; text-decoration: none; font-weight: bold; padding: 10px;">Go to Dashboard</a>
+    `;
+    document.querySelector('.status-box').appendChild(actionContainer);
+});
+

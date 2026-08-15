@@ -42,3 +42,23 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
 }
+
+.logo {
+    display: flex;
+    align-items: center; 
+    gap: 10px; 
+    font-size: 24px;
+    font-weight: bold;
+    text-decoration: none;
+    color: inherit; 
+}
+
+.logo span {
+    color: var(--primary-green);
+}
+
+.logo-icon {
+    height: 60px; 
+    width: auto;
+    object-fit: contain;
+}
