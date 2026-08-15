@@ -4,214 +4,420 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediProcure AI - Smart Tendering</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="config.js"></script>
     <style>
+        :root {
+            --primary-glow: #38bdf8;
+            --secondary-glow: #10b981;
+            --bg-dark: #0f172a;
+            --bg-darker: #0b0f19;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             background-color: #f8fafc;
             color: #333;
             overflow-x: hidden;
+            scroll-behavior: smooth;
         }
         
-        /* Navbar */
+        /* Glassmorphism Navbar */
         header {
-            background-color: #111827;
-            color: white;
-            padding: 20px 50px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    color: white;
+    padding: 20px 5%;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    z-index: 1000;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    transition: all 0.3s ease;
+}
         .logo {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 26px;
+            font-weight: 700;
             text-decoration: none;
             color: white;
+            letter-spacing: 1px;
         }
         .logo span {
-            color: #10b981;
+            background: linear-gradient(to right, var(--secondary-glow), var(--primary-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .nav-links {
             display: flex;
-            gap: 20px;
+            gap: 25px;
             align-items: center;
         }
         .btn-login {
-            color: white;
+            color: var(--text-light);
             text-decoration: none;
-            font-weight: bold;
-            transition: color 0.3s;
+            font-weight: 600;
+            transition: color 0.3s ease;
         }
         .btn-login:hover {
-            color: #10b981;
+            color: var(--primary-glow);
         }
         .btn-signup {
-            background-color: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 10px 24px;
+            border-radius: 8px;
             text-decoration: none;
-            font-weight: bold;
-            transition: background 0.3s;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+            transition: all 0.3s ease;
         }
         .btn-signup:hover {
-            background-color: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
         }
 
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            color: white;
-            padding: 100px 20px;
-            text-align: center;
-        }
-        .hero h1 {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #f8fafc;
-        }
-        .hero h1 span {
-            color: #38bdf8;
-        }
-        .hero p {
-            font-size: 20px;
-            color: #cbd5e1;
-            max-width: 700px;
-            margin: 0 auto 40px auto;
-            line-height: 1.6;
-        }
-        .hero-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        .btn-primary {
-            background-color: #10b981;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            transition: transform 0.2s, background 0.3s;
-        }
-        .btn-primary:hover {
-            background-color: #059669;
-            transform: translateY(-3px);
-        }
-        .btn-secondary {
-            background-color: transparent;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            border: 2px solid #38bdf8;
-            transition: background 0.3s;
-        }
-        .btn-secondary:hover {
-            background-color: rgba(56, 189, 248, 0.1);
-        }
+        /* Modern Hero Section */
+.hero {
+    position: relative;
+    overflow: hidden;
 
-        /* Features Section */
+    height: calc(100vh - 100px);
+    min-height: 600px;
+
+    padding: 60px 20px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    color: white;
+    text-align: center;
+
+    background: var(--bg-darker);
+}
+
+/* Background Video */
+.hero-video {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    z-index: 0;
+}
+
+/* Soft transparent gradient overlay */
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(11, 15, 25, 0.88) 0%,
+            rgba(11, 15, 25, 0.68) 70%,
+            rgba(11, 15, 25, 0.48) 100%
+        );
+
+    z-index: 1;
+}
+
+/* Subtle blue/green glow */
+.hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+
+    background:
+        radial-gradient(
+            circle at 75% 50%,
+            rgba(56, 189, 248, 0.12),
+            transparent 45%
+        ),
+        radial-gradient(
+            circle at 25% 60%,
+            rgba(16, 185, 129, 0.08),
+            transparent 40%
+        );
+
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Hero Content */
+.hero h1,
+.hero p,
+.hero-buttons {
+    position: relative;
+    z-index: 2;
+}
+
+.hero h1 {
+    font-size: 56px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    line-height: 1.2;
+    color: var(--text-light);
+}
+
+.hero h1 span {
+    background: linear-gradient(
+        135deg,
+        #38bdf8,
+        #10b981
+    );
+
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 650px;
+    margin: 0 auto 40px auto;
+    line-height: 1.8;
+    font-weight: 300;
+}
+
+.hero-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.hero .btn-primary,
+.hero .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 14px 28px;
+
+    border-radius: 10px;
+
+    font-size: 16px;
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition: all 0.3s ease;
+
+    position: relative;
+    z-index: 2;
+}
+
+.hero .btn-primary {
+    background: linear-gradient(
+        135deg,
+        #10b981,
+        #06b6d4
+    );
+
+    color: white;
+
+    border: 1px solid transparent;
+
+    box-shadow:
+        0 8px 25px rgba(16, 185, 129, 0.25);
+}
+
+.hero .btn-primary:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 12px 30px rgba(16, 185, 129, 0.35);
+}
+
+.hero .btn-secondary {
+    background: rgba(15, 23, 42, 0.45);
+
+    color: white;
+
+    border: 1px solid rgba(56, 189, 248, 0.5);
+
+    backdrop-filter: blur(8px);
+}
+
+.hero .btn-secondary:hover {
+    background: rgba(56, 189, 248, 0.12);
+
+    border-color: #38bdf8;
+
+    transform: translateY(-2px);
+}
+
+        /* Features Section with Hover Effects */
         .features {
-            padding: 80px 20px;
+            padding: 100px 5%;
             max-width: 1200px;
-            margin: 0 auto;
+            margin: -50px auto 0;
             text-align: center;
+            position: relative;
+            z-index: 10;
         }
         .features h2 {
-            font-size: 36px;
+            font-size: 38px;
             color: #1e293b;
-            margin-bottom: 50px;
+            margin-bottom: 60px;
+            font-weight: 700;
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 30px;
         }
         .card {
             background: white;
-            padding: 40px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border-top: 5px solid #2563eb;
-            transition: transform 0.3s;
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            border-top: 4px solid #2563eb;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(37,99,235,0.05), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         .card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-12px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+        .card:hover::after {
+            opacity: 1;
         }
         .card-icon {
-            font-size: 50px;
-            margin-bottom: 20px;
+            font-size: 55px;
+            margin-bottom: 25px;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        .card:hover .card-icon {
+            transform: scale(1.1);
         }
         .card h3 {
-            font-size: 22px;
+            font-size: 24px;
             color: #0f172a;
             margin-bottom: 15px;
+            font-weight: 600;
         }
         .card p {
             color: #64748b;
-            line-height: 1.6;
+            line-height: 1.7;
+            font-size: 15px;
         }
         
         .card.green { border-top-color: #10b981; }
         .card.orange { border-top-color: #f59e0b; }
 
-        /* How it Works */
+        /* How it Works Section */
         .how-it-works {
-            background-color: #e2e8f0;
-            padding: 80px 20px;
+            background: linear-gradient(180deg, #ffffff, #f1f5f9);
+            padding: 100px 5%;
             text-align: center;
         }
         .how-it-works h2 {
-            font-size: 36px;
+            font-size: 38px;
             color: #1e293b;
-            margin-bottom: 50px;
+            margin-bottom: 60px;
+            font-weight: 700;
         }
         .steps {
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 40px;
-            max-width: 1000px;
+            gap: 50px;
+            max-width: 1100px;
             margin: 0 auto;
+            position: relative;
         }
         .step {
             flex: 1;
-            min-width: 250px;
+            min-width: 280px;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            transition: transform 0.3s ease;
+        }
+        .step:hover {
+            transform: translateY(-5px);
         }
         .step-number {
-            background-color: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #38bdf8);
             color: white;
-            width: 60px;
-            height: 60px;
-            line-height: 60px;
+            width: 65px;
+            height: 65px;
+            line-height: 65px;
             border-radius: 50%;
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0 auto 20px auto;
+            font-size: 26px;
+            font-weight: 700;
+            margin: -60px auto 20px auto;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+            border: 5px solid white;
         }
         .step h4 {
-            font-size: 20px;
+            font-size: 22px;
             color: #1e293b;
+            margin-bottom: 15px;
+            font-weight: 600;
         }
         .step p {
             color: #475569;
+            font-size: 15px;
+            line-height: 1.6;
         }
 
         /* Footer */
         footer {
-            background-color: #111827;
-            color: #94a3b8;
+            background-color: var(--bg-darker);
+            color: var(--text-muted);
             text-align: center;
-            padding: 30px 20px;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        footer p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 40px; }
+            .hero { padding: 100px 20px 80px; }
+            .nav-links { display: none; }
+
+            .hero-video {
+                object-position: center;
+            }
         }
     </style>
 </head>
@@ -228,13 +434,37 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <h1>Transform Hospital Procurement with <span>AI</span></h1>
-        <p>Automate tender evaluations, extract standard specifications instantly using our advanced RAG engine, and make data-driven decisions with comprehensive BI analytics.</p>
-        <div class="hero-buttons">
-            <a href="signup.html" class="btn-primary">Start Free Trial</a>
-            <a href="#features" class="btn-secondary">Explore Features</a>
-        </div>
-    </section>
+
+    <!-- Background Animation -->
+    <video
+        class="hero-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        aria-hidden="true">
+
+        <source src="assets/mediprocure-animation.mp4" type="video/mp4">
+
+    </video>
+
+    <h1>
+        Transform Hospital Procurement with <span>AI</span>
+    </h1>
+
+    <p>
+        Automate tender evaluations, extract standard specifications instantly
+        using our advanced RAG engine, and make data-driven decisions with
+        comprehensive BI analytics.
+    </p>
+
+    <div class="hero-buttons">
+        <a href="signup.html" class="btn-primary">Start Free Trial</a>
+        <a href="#features" class="btn-secondary">Explore Features</a>
+    </div>
+
+</section>
 
     <!-- Features Section -->
     <section id="features" class="features">
@@ -242,8 +472,8 @@
         <div class="grid">
             <div class="card">
                 <div class="card-icon">🧠</div>
-                <h3>Smart RAG Engine</h3>
-                <p>Upload massive vendor PDF offers and standard specifications. Our Gemini-powered AI engine instantly reads, chunks, and matches mandatory requirements without human error.</p>
+                <h3>Smart Document Analysis</h3>
+                <p>Upload vendor PDF offers and standard specifications. Our AI automatically reads and analyzes the documents, then matches each offer against the required specifications — helping you quickly identify compliant options and avoid manual errors.</p>
             </div>
             <div class="card green">
                 <div class="card-icon">📊</div>

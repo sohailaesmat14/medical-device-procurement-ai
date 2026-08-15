@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <span style="font-weight: bold; font-size: 14px; color: white;">${userName}</span>
                 </div>
                 <a href="upload.html" style="background-color: #2563eb; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); transition: 0.3s;">Dashboard 🚀</a>
-                <button onclick="performLogout()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 20px; padding: 0; margin-left: 5px;" title="Logout">🚪</button>
+                <button onclick="performLogout()" style="background: none; border: none; color: #10b981; cursor: pointer; font-size: 15px; padding: 0; margin-left: 5px;" title="Logout">Logout</button>
             `;
 
             if (signupLink && signupLink.parentElement === loginLink.parentElement) {
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const quotaValue = document.createElement("b");
         quotaValue.textContent = String(remainingQuota);
         const pointsSpan = document.createElement("span");
-        pointsSpan.textContent = " Points";
+        pointsSpan.innerHTML = "&nbsp;Points";
         quotaBadge.appendChild(coinSpan);
         quotaBadge.appendChild(quotaValue);
         quotaBadge.appendChild(pointsSpan);
