@@ -11,9 +11,7 @@ namespace MediTender.API.Services
 
         public TextChunkingService(int maxTokensPerChunk = 500, int overlapTokens = 50)
         {
-            // FIX: previously, if overlapTokens >= maxTokensPerChunk was ever passed in,
-            // the loop step (_maxTokensPerChunk - _overlapTokens) would be zero or negative,
-            // causing an infinite loop. Defaults are safe, but nothing enforced that.
+
             if (maxTokensPerChunk <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxTokensPerChunk), "Must be greater than zero.");
             if (overlapTokens < 0 || overlapTokens >= maxTokensPerChunk)

@@ -138,7 +138,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (text === 'start free trial' || text === 'get started') {
                 a.href = "upload.html";
                 a.innerText = "Go to Dashboard ";
-                a.style.backgroundColor = "var(--success-color)"; // Optional: make it green to stand out
+                a.style.backgroundColor = "var(--success-color)"; 
                 a.style.borderColor = "var(--success-color)";
             }
         });

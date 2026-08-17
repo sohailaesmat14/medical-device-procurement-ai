@@ -459,12 +459,6 @@ namespace MediTender.API.Controllers
             public int VendorCount { get; set; }
         }
 
-        // FIX: This was previously [Authorize(Roles = "Committee")] while the more
-        // powerful "override-vendor-decision" (bulk-approves ALL pending mandatory
-        // requirements at once) only required ownership of the tender. That meant a
-        // regular tender owner had MORE override power via the bulk endpoint than they
-        // were allowed via this fine-grained one. Both now share the same authorization
-        // boundary: you may only override evaluations that belong to a tender you own.
         [HttpPost("override-evaluation")]
         [Authorize]
         public async Task<IActionResult> OverrideEvaluation([FromBody] OverrideRequest request)

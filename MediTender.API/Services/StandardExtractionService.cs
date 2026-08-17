@@ -71,10 +71,7 @@ namespace MediTender.API.Services
             
             Do not include any markdown formatting or json code blocks.
             ";
-            
-            // FIX: This was the only AI call in the codebase not using jsonMode,
-            // relying solely on prompt instructions to get clean JSON back — increasing
-            // the risk of parse failures (and wasted quota) compared to the other services.
+
             var aiResponse = await _geminiService.GenerateChatResponseAsync(prompt, jsonMode: true, cancellationToken);
             var cleanedJson = aiResponse.Replace("```json", "").Replace("```", "").Trim();
             
