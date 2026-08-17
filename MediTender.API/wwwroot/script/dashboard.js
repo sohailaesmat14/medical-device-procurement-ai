@@ -1,5 +1,3 @@
-
-
 if (!sessionStorage.getItem("jwt_token")) {
     window.location.replace("login.html");
 }
@@ -606,6 +604,7 @@ window.overrideItem = async function (vendorName, reqText) {
                 body: JSON.stringify({
                 tenderId: sessionStorage.getItem("meditender_current_id"),
                 vendorName: vendorName,
+                requirement: reqText,
             }),
         });
 
@@ -696,30 +695,143 @@ function applyTableFilters() {
     });
 }
 
-function exportToExcel() {
-    const originalTable = document.querySelector(".matrix-container table");
-    const clonedTable = originalTable.cloneNode(true);
+async function exportToExcel() {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('MediTender BI Report');
 
-    const rows = clonedTable.querySelectorAll("tr");
+    worksheet.views = [{ showGridLines: false }];
+
+    worksheet.addRow(['MediProcure AI - Executive Summary']).font = { bold: true, size: 16, color: { argb: 'FF2563EB' } };
+    worksheet.mergeCells('A1:E1');
+
+    const summaryText = document.querySelector('.summary-text')?.innerText || "";
+    worksheet.addRow([summaryText]);
+    worksheet.mergeCells('A2:E2');
+    worksheet.getRow(2).height = 40;
+    worksheet.getRow(2).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+
+    worksheet.addRow([]); 
+
+    const insightBoxes = document.querySelectorAll('.insight-box');
+    let insightHeaders = [];
+    let insightValues = [];
+    insightBoxes.forEach(box => {
+        insightHeaders.push(box.querySelector('h3').innerText);
+        insightValues.push(box.querySelector('.insight-value').innerText);
+    });
+
+    if (insightHeaders.length > 0) {
+        worksheet.addRow(insightHeaders).font = { bold: true, color: { argb: 'FF475569' } };
+        worksheet.addRow(insightValues).font = { bold: true, size: 12 };
+        worksheet.addRow([]); 
+    }
+
+    worksheet.addRow(['Detailed Technical & Financial Matrix']).font = { bold: true, size: 14 };
+    worksheet.addRow([]);
+
+    const table = document.querySelector(".matrix-container table");
+    const thead = table.querySelector("thead tr");
+    let columnsConfig = [];
+    
+    for (let i = 0; i < thead.cells.length; i++) {
+        if (thead.cells[i].style.display !== "none") {
+            let headerText = thead.cells[i].innerText.replace(/\n/g, ' - ');
+            columnsConfig.push({ 
+                header: headerText, 
+                key: `col${i}`, 
+                width: i === 0 ? 55 : 30 
+            });
+        }
+    }
+    
+    worksheet.columns = columnsConfig;
+    
+    const headerRow = worksheet.getRow(worksheet.lastRow.number);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    });
+
+    const tbody = table.querySelector("tbody");
+    const rows = tbody.querySelectorAll("tr");
+
     rows.forEach(row => {
-        if (row.style.display === "none") {
-            row.parentNode.removeChild(row);
+        if (row.style.display !== "none") {
+            let rowData = {};
+            
+            for (let i = 0; i < row.cells.length; i++) {
+                if (row.cells[i].style.display !== "none") {
+                    rowData[`col${i}`] = row.cells[i].innerText.replace(/\n/g, '\r\n');
+                }
+            }
+            
+            let newRow = worksheet.addRow(rowData);
+
+            for (let i = 0; i < row.cells.length; i++) {
+                if (row.cells[i].style.display !== "none") {
+                    let cell = newRow.getCell(i + 1);
+                    cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                    
+                    cell.border = {
+                        top: {style:'thin', color: {argb:'FFCBD5E1'}},
+                        left: {style:'thin', color: {argb:'FFCBD5E1'}},
+                        bottom: {style:'thin', color: {argb:'FFCBD5E1'}},
+                        right: {style:'thin', color: {argb:'FFCBD5E1'}}
+                    };
+
+                    let cellText = cell.value || "";
+                    if (cellText.includes('Partially Met')) {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; 
+                    } else if (cellText.includes('Not Met') || cellText.includes('Error')) {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; 
+                    } else if (cellText.includes('Not Mentioned')) {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; 
+                    } else if (cellText.includes('Met')) {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; 
+                    }
+                }
+            }
         }
     });
 
-    const cells = clonedTable.querySelectorAll("th, td");
-    cells.forEach(cell => {
-        if (cell.style.display === "none") {
-            cell.parentNode.removeChild(cell);
-        }
-    });
+    const scoreCanvas = document.getElementById("totalScoreChart");
+    const distCanvas = document.getElementById("statusDistributionChart");
 
-    TableToExcel.convert(clonedTable, {
-        name: "MediTender_Analysis_Report.xlsx",
-        sheet: {
-            name: "Technical Analysis",
-        },
-    });
+    if (scoreCanvas && distCanvas) {
+        let finalRow = worksheet.lastRow.number + 3; 
+
+        worksheet.getRow(finalRow).values = ['Visual Analytics (AI Charts)'];
+        worksheet.getRow(finalRow).font = { bold: true, size: 16, color: { argb: 'FF2563EB' } };
+        finalRow += 2;
+
+        const scoreImgData = scoreCanvas.toDataURL('image/png').split(',')[1];
+        const distImgData = distCanvas.toDataURL('image/png').split(',')[1];
+
+        const scoreImgId = workbook.addImage({
+            base64: scoreImgData,
+            extension: 'png',
+        });
+
+        const distImgId = workbook.addImage({
+            base64: distImgData,
+            extension: 'png',
+        });
+
+        worksheet.addImage(scoreImgId, {
+            tl: { col: 0, row: finalRow }, 
+            ext: { width: 500, height: 280 }
+        });
+
+        worksheet.addImage(distImgId, {
+            tl: { col: 3, row: finalRow }, 
+            ext: { width: 500, height: 280 }
+        });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    saveAs(blob, `MediProcure_AI_Analysis_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 function exportToPDF() {

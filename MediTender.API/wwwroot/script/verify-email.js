@@ -31,6 +31,7 @@ async function verifyEmail() {
         if (response.ok) {
             const data = await response.json();
             sessionStorage.setItem("jwt_token", data.token);
+            sessionStorage.setItem("user_name", data.fullName); 
             sessionStorage.setItem("user_email", email); 
             sessionStorage.removeItem("temp_user_email"); 
             window.location.replace("subscription.html");

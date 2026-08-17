@@ -212,39 +212,39 @@ function updateVendorUI() {
 }
 
 function processUploads() {
-    const standardFile =
-        document.getElementById("standardFile").files[0];
+    const standardFile = document.getElementById("standardFile").files[0];
 
     if (!standardFile) {
-        showCustomModal(
-            "Missing Document",
-            "Please upload the Standard Specifications file.",
-            false,
-        );
+        showCustomModal("Missing Document", "Please upload the Standard Specifications file.", false);
         return;
     }
     if (vendorQueue.length === 0) {
-        showCustomModal(
-            "Missing Vendor",
-            "Please add at least one vendor offer to the queue.",
-            false,
-        );
+        showCustomModal("Missing Vendor", "Please add at least one vendor offer to the queue.", false);
         return;
     }
     for (let i = 0; i < vendorQueue.length; i++) {
         const v = vendorQueue[i];
         if (v.techFile.size > MAX_FILE_SIZE || (v.finFile && v.finFile.size > MAX_FILE_SIZE)) {
-            showCustomModal(
-                "File Too Large",
-                `One or more files for vendor '${escapeHTML(v.name)}' exceed the 100MB limit.`,
-                false
-            );
+            showCustomModal("File Too Large", `One or more files for vendor '${escapeHTML(v.name)}' exceed the 100MB limit.`, false);
             return;
         }
     }
 
-    let expectedCost = vendorQueue.length * CONFIG.BILLING.PER_VENDOR_COST;
-    let confirmMessage = `The AI analysis will require ${expectedCost} points from your quota.\n\nAre you sure you want to proceed?`;
+
+    let totalFiles = 1 + vendorQueue.length + vendorQueue.filter(v => v.finFile).length;
+    let uploadCost = totalFiles * 5;
+    
+    let extractionCost = 10;
+    
+    let comparisonCost = vendorQueue.length * CONFIG.BILLING.PER_VENDOR_COST;
+    
+    let expectedCost = uploadCost + extractionCost + comparisonCost;
+
+    let confirmMessage = `The AI analysis will require ${expectedCost} points from your quota:\n` +
+                         `• Uploading ${totalFiles} files: ${uploadCost} pts\n` +
+                         `• Standard Extraction: ${extractionCost} pts\n` +
+                         `• Vendors Analysis: ${comparisonCost} pts\n\n` +
+                         `Are you sure you want to proceed?`;
 
     showCustomModal(
         "Confirm Analysis",
@@ -402,9 +402,26 @@ async function executeUploadSequence(standardFile) {
     }
 }            
 
-document.addEventListener("DOMContentLoaded", () => {
-    const userName = sessionStorage.getItem("user_name") || "Committee Member";
+document.addEventListener("DOMContentLoaded", async () => {
+    let userName = sessionStorage.getItem("user_name");
     
+    if (!userName || userName === "Committee Member" || userName === "undefined") {
+        const token = sessionStorage.getItem("jwt_token");
+        try {
+            const res = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Auth/me`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const me = await res.json();
+                userName = me.fullName || me.FullName || "Committee Member";
+                sessionStorage.setItem("user_name", userName);
+            }
+        } catch (e) {
+            userName = "Committee Member";
+        }
+    }
+
+    userName = userName || "Committee Member";
     document.getElementById("userNameDisplay").innerText = userName;
 
     const initials = userName.split(' ')
@@ -425,12 +442,24 @@ function goToSubscription() {
 }
 
 function checkPointsAndStart() {
-    let userPoints = 0; 
+    let cachedQuota = sessionStorage.getItem("meditender_cached_quota");
+    let userPoints = parseInt(cachedQuota) || 0; 
+    
+    let extractionCost = 10;
+    let vendorCost = CONFIG.BILLING.PER_VENDOR_COST || 22;
+    let requiredPoints = extractionCost + (vendorQueue.length * vendorCost);
 
-    if (userPoints <= 0) {
+    if (vendorQueue.length === 0) {
+        showCustomModal("Missing Vendor", "Please add at least one vendor offer to the queue.", false);
+        return;
+    }
+
+    if (userPoints < requiredPoints) {
+        document.querySelector('#outOfPointsModal .modal-message').innerText = 
+            `You need ${requiredPoints} points to process this tender, but your current balance is ${userPoints} points. Would you like to top up?`;
         document.getElementById('outOfPointsModal').style.display = 'flex';
     } else {
-        console.log("Starting analysis...");
-        startUploadProcess();
+        console.log("Points validated. Starting analysis...");
+        processUploads(); 
     }
 }

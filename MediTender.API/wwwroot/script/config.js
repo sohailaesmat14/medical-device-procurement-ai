@@ -7,8 +7,8 @@ const CONFIG = {
     BILLING: {
         FREE_QUOTA: 200,
         MONTHLY_QUOTA: 2000,
-        ANNUAL_QUOTA: 99999,
-        PER_VENDOR_COST: 15
+        ANNUAL_QUOTA: 18000,
+        PER_VENDOR_COST: 22
     }
 };
 
@@ -157,29 +157,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isAuthPage = authPages.some(page => currentPage.includes(page));
 
     if (token && !isAuthPage && !isHomePage) {
-        let remainingQuota = sessionStorage.getItem("meditender_cached_quota");
+        let remainingQuota = "N/A";
+        
+        try {
+            const quotaRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ vendorCount: 0 })
+            });
 
-        if (!remainingQuota) {
-            try {
-                const quotaRes = await fetchWithTimeout(`${CONFIG.API_BASE_URL}/api/Document/check-quota`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ vendorCount: 0 })
-                });
-
-                if (quotaRes.ok) {
-                    const quotaData = await quotaRes.json();
-                    remainingQuota = quotaData.remainingQuota;
-                    sessionStorage.setItem("meditender_cached_quota", remainingQuota);
-                } else {
-                    remainingQuota = "N/A";
-                }
-            } catch (e) {
-                remainingQuota = "N/A";
+            if (quotaRes.ok) {
+                const quotaData = await quotaRes.json();
+                remainingQuota = quotaData.remainingQuota;
+                sessionStorage.setItem("meditender_cached_quota", remainingQuota);
             }
+        } catch (e) {
+            remainingQuota = "N/A";
+            console.error("Failed to fetch live quota:", e);
         }
 
         const existingWidget = document.getElementById("meditender-global-widget");

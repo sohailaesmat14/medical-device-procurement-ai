@@ -221,7 +221,7 @@ namespace MediTender.API.Controllers
             await _dbContext.SaveChangesAsync();
 
             var token = GenerateJwtToken(user);
-            return Ok(new { Token = token, Message = "Email verified successfully!" });
+            return Ok(new { Token = token, Message = "Email verified successfully!", FullName = user.FullName });
         }
 
         [HttpPost("forgot-password")]
